@@ -61,6 +61,8 @@ QGenericArgument makeQtArg(const T& arg)
 				: QtCallbackBase(receiver,method) {} \
 			   void invoke(argList) \
 			   { invokeWithArgs(makeQtArgList); } \
+			   void operator()(argList) \
+			   { invokeWithArgs(makeQtArgList); } \
     }
 
 #define MACRO_COMMA ,
