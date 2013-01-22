@@ -1,4 +1,4 @@
-#include "test.h"
+#include "WebPageDownloader.h"
 
 #include <QtConcurrentRun>
 #include <QtCore/QCoreApplication>
