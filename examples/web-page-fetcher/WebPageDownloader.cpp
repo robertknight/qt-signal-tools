@@ -38,8 +38,8 @@ WebPageDownloader::WebPageDownloader()
 void WebPageDownloader::savePage(const QUrl& url, const QString& fileName)
 {
 	QtCallback1<QByteArray> callback(this, SLOT(fetchedPage(QString,QUrl,QByteArray)));
-	callback.bindArg(fileName);
-	callback.bindArg(url);
+	callback.bind(fileName);
+	callback.bind(url);
 	m_pageFetcher->fetchPage(url, callback);
 
 	++m_pendingRequests;

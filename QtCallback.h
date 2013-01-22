@@ -5,8 +5,8 @@
 #include <QtCore/QPointer>
 #include <QtCore/QSharedData>
 #include <QtCore/QSharedDataPointer>
+#include <QtCore/QVarLengthArray>
 #include <QtCore/QVariant>
-#include <QtCore/QVector>
 
 class QtCallbackBase
 {
@@ -15,10 +15,10 @@ class QtCallbackBase
 		QtCallbackBase(QObject* receiver, const char* method);
 		QtCallbackBase(const QtCallbackBase& other);
 
-		void bindArg(int index, const QVariant& value);
-		void bindArg(const QVariant& value);
+		void bind(int index, const QVariant& value);
+		void bind(const QVariant& value);
 
-		void invokeWithArgs(const QGenericArgument& arg1 = QGenericArgument(),
+		bool invokeWithArgs(const QGenericArgument& arg1 = QGenericArgument(),
 		                    const QGenericArgument& arg2 = QGenericArgument(),
 					        const QGenericArgument& arg3 = QGenericArgument(),
 							const QGenericArgument& arg4 = QGenericArgument(),
@@ -37,7 +37,7 @@ class QtCallbackBase
 			};
 			QPointer<QObject> receiver;
 			QMetaMethod method;
-			QVector<Arg> args;
+			QVarLengthArray<Arg,5> args;
 		};
 		QSharedDataPointer<Data> d;
 };
@@ -52,29 +52,30 @@ QGenericArgument makeQtArg(const T& arg)
  *  QtCallback<typeCount>
  */
 #define DECLARE_QTCALLBACK_TEMPLATE(typeCount, typeList, argList, makeQtArgList) \
-	template <typeList> \
+	typeList \
 	class QtCallback ## typeCount : public QtCallbackBase \
 	{ \
 		public:\
 			   QtCallback ## typeCount() {}\
 			   QtCallback ## typeCount(QObject* receiver, const char* method)\
 				: QtCallbackBase(receiver,method) {} \
-			   void invoke(argList) \
-			   { invokeWithArgs(makeQtArgList); } \
-			   void operator()(argList) \
-			   { invokeWithArgs(makeQtArgList); } \
+			   bool invoke(argList) \
+			   { return invokeWithArgs(makeQtArgList); } \
+			   bool operator()(argList) \
+			   { return invokeWithArgs(makeQtArgList); } \
     }
 
 #define MACRO_COMMA ,
 
-DECLARE_QTCALLBACK_TEMPLATE(1, class T1, const T1& arg1, makeQtArg(arg1));
-DECLARE_QTCALLBACK_TEMPLATE(2, class T1 MACRO_COMMA class T2,
+DECLARE_QTCALLBACK_TEMPLATE(,,,);
+DECLARE_QTCALLBACK_TEMPLATE(1, template<class T1>, const T1& arg1, makeQtArg(arg1));
+DECLARE_QTCALLBACK_TEMPLATE(2, template<class T1 MACRO_COMMA class T2>,
                  const T1& arg1 MACRO_COMMA const T2& arg2,
                  makeQtArg(arg1) MACRO_COMMA makeQtArg(arg2));
-DECLARE_QTCALLBACK_TEMPLATE(3, class T1 MACRO_COMMA class T2 MACRO_COMMA class T3,
+DECLARE_QTCALLBACK_TEMPLATE(3, template<class T1 MACRO_COMMA class T2 MACRO_COMMA class T3>,
                  const T1& arg1 MACRO_COMMA const T2& arg2 MACRO_COMMA const T3& arg3,
                  makeQtArg(arg1) MACRO_COMMA makeQtArg(arg2) MACRO_COMMA makeQtArg(arg3));
-DECLARE_QTCALLBACK_TEMPLATE(4, class T1 MACRO_COMMA class T2 MACRO_COMMA class T3 MACRO_COMMA class T4,
+DECLARE_QTCALLBACK_TEMPLATE(4, template<class T1 MACRO_COMMA class T2 MACRO_COMMA class T3 MACRO_COMMA class T4>,
                  const T1& arg1 MACRO_COMMA const T2& arg2 MACRO_COMMA const T3& arg3 MACRO_COMMA const T4& arg4,
                  makeQtArg(arg1) MACRO_COMMA makeQtArg(arg2) MACRO_COMMA makeQtArg(arg3) MACRO_COMMA makeQtArg(arg4));
 
