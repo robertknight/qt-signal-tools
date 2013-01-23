@@ -29,10 +29,10 @@ int main(int argc, char** argv)
 	// setup another couple of buttons.
 	// Here we use a more succinct syntax to create the callback
 	QtCallbackProxy::connectCallback(button2, SIGNAL(clicked(bool)),
-	  QtCallback1<int>(slider, SLOT(setValue(int))).bind(50));
+	  QtCallback(slider, SLOT(setValue(int))).bind(50));
 
 	QtCallbackProxy::connectCallback(button3, SIGNAL(clicked(bool)),
-	  QtCallback1<int>(slider, SLOT(setValue(int))).bind(80));
+	  QtCallback(slider, SLOT(setValue(int))).bind(80));
 
 	layout->addWidget(button1);
 	layout->addWidget(button2);

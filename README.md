@@ -42,7 +42,7 @@ Usage:
 MyObject receiver;
 QPushButton button;
 QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)), callback,
-  QtCallback1(&receiver, SLOT(buttonClicked(int))).bind(42));
+  QtCallback(&receiver, SLOT(buttonClicked(int))).bind(42));
 
 // invokes MyObject::buttonClicked() slot with arguments (42)
 button.click();

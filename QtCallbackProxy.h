@@ -22,7 +22,7 @@
  *
  *  MyObject receiver;
  *  QPushButton button;
- *  QtCallback1<int> callback(&receiver, SLOT(buttonClicked(int)));
+ *  QtCallback callback(&receiver, SLOT(buttonClicked(int)));
  *  callback.bind(42);
  *  QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)), callback);
  *  button.click();
