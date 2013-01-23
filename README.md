@@ -21,3 +21,14 @@ void MyWidget::someSlot(int firstArg, const QString& secondArg)
 {
 }
 ```
+
+### QtCallbackProxy
+
+QtCallbackProxy provides a way to invoke QtCallback objects when an object emits a signal.
+This provides a way to pass additional arguments than those provided by the signal to a slot
+when the signal is emitted.
+
+In Qt 5 with C++11 support this is made much easier by the ability to connect signals to lambdas
+and functions (or via Qt 5 with tr1::bind and tr1::function);
+
+QtCallbackProxy emulates this for Qt 4.
