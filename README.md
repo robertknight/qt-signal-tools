@@ -48,3 +48,8 @@ QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)), callback,
 button.click();
 ```
 
+## License
+
+qt-signal-tools includes some code adapted from Qt's classes (such as QSignalSpy).
+Hence it is under the same license as Qt itself (LGPL).
+
