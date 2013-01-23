@@ -1,6 +1,7 @@
 #include "QtCallbackProxy.h"
 
 #include <QtGui/QApplication>
+#include <QtGui/QLabel>
 #include <QtGui/QPushButton>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QSlider>
@@ -17,6 +18,8 @@ int main(int argc, char** argv)
 	QPushButton* button2 = new QPushButton("Set to 50%");
 	QPushButton* button3 = new QPushButton("Set to 80%");
 
+	QLabel* focusLabel = new QLabel("Slider is hovered");
+	focusLabel->setVisible(false);
 	QSlider* slider = new QSlider(Qt::Horizontal);
 
 	// create a callback object which sets the slider's value
@@ -34,10 +37,17 @@ int main(int argc, char** argv)
 	QtCallbackProxy::connectCallback(button3, SIGNAL(clicked(bool)),
 	  QtCallback(slider, SLOT(setValue(int))).bind(80));
 
+	QtCallbackProxy::connectEvent(slider, QEvent::Enter,
+	  QtCallback(focusLabel, SLOT(setVisible(bool))).bind(true));
+
+	QtCallbackProxy::connectEvent(slider, QEvent::Leave,
+	  QtCallback(focusLabel, SLOT(setVisible(bool))).bind(false));
+
 	layout->addWidget(button1);
 	layout->addWidget(button2);
 	layout->addWidget(button3);
 	layout->addWidget(slider);
+	layout->addWidget(focusLabel);
 	
 	layout->addStretch();
 

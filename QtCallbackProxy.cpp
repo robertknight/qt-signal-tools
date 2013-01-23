@@ -37,6 +37,14 @@ void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtCallback
 	m_bindings << binding;
 }
 
+void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtCallbackBase& callback)
+{
+	sender->installEventFilter(this);
+
+	EventBinding binding(sender, event, callback);
+	m_eventBindings << binding;
+}
+
 QtCallbackProxy* installCallbackProxy(QObject* sender)
 {
 	const char* callbackProperty = "qt_callback_handler";
@@ -53,6 +61,12 @@ void QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const
 {
 	QtCallbackProxy* proxy = installCallbackProxy(sender);
 	proxy->bind(sender, signal, callback);
+}
+
+void QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const QtCallbackBase& callback)
+{
+	QtCallbackProxy* proxy = installCallbackProxy(sender);
+	proxy->bind(sender, event, callback);
 }
 
 const QtCallbackProxy::Binding* QtCallbackProxy::matchBinding(QObject* sender, int signalIndex) const
@@ -119,5 +133,18 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 		--methodId;
 	}
 	return methodId;
+}
+
+bool QtCallbackProxy::eventFilter(QObject* watched, QEvent* event)
+{
+	Q_FOREACH(const EventBinding& binding, m_eventBindings)
+	{
+		if (binding.sender == watched &&
+		    binding.eventType == event->type())
+		{
+			binding.callback.invokeWithArgs();
+		}
+	}
+	return QObject::eventFilter(watched, event);
 }
 
