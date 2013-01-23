@@ -2,6 +2,10 @@
 
 qt-signal-tools is a collection of utility classes related to signal and slots in Qt.
 
+## Requirements
+
+Requires Qt 4.8
+
 ## Classes
 
 ### QtCallback
@@ -32,3 +36,15 @@ In Qt 5 with C++11 support this is made much easier by the ability to connect si
 and functions (or via Qt 5 with tr1::bind and tr1::function);
 
 QtCallbackProxy emulates this for Qt 4.
+
+Usage:
+```cpp
+MyObject receiver;
+QPushButton button;
+QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)), callback,
+  QtCallback1(&receiver, SLOT(buttonClicked(int))).bind(42));
+
+// invokes MyObject::buttonClicked() slot with arguments (42)
+button.click();
+```
+
