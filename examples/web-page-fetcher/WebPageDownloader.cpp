@@ -1,11 +1,15 @@
 #include "WebPageDownloader.h"
 
+#include "QtCallbackProxy.h"
+
 #include <QtConcurrentRun>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
 #include <QtCore/QFile>
 
 #include <QtNetwork/QNetworkReply>
+
+Q_DECLARE_METATYPE(QNetworkReply*)
 
 PageFetcher::PageFetcher(QObject* parent)
 	: QObject(parent)
@@ -15,17 +19,18 @@ PageFetcher::PageFetcher(QObject* parent)
 
 void PageFetcher::fetchPage(const QUrl& url, const QtCallback1<QByteArray>& callback)
 {
-	QNetworkRequest request(url);
-	request.setAttribute(QNetworkRequest::User, QVariant::fromValue(callback));
+	QNetworkReply* reply = m_manager->get(QNetworkRequest(url));
 
-	QNetworkReply* reply = m_manager->get(request);
-	connect(reply, SIGNAL(finished()), this, SLOT(requestFinished()));
+	QtCallback finishedCallback(this, SLOT(requestFinished(QNetworkReply*,QtCallback1<QByteArray>)));
+	finishedCallback.bind(reply);
+	finishedCallback.bind(callback);
+
+	QtCallbackProxy::connectCallback(reply, SIGNAL(finished()), finishedCallback);
 }
 
-void PageFetcher::requestFinished()
+void PageFetcher::requestFinished(QNetworkReply* reply, const QtCallback1<QByteArray>& callback)
 {
-	QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-	QtCallback1<QByteArray> callback = reply->request().attribute(QNetworkRequest::User).value<QtCallback1<QByteArray> >();
+	reply->deleteLater();
 	callback.invoke(reply->readAll());
 }
 

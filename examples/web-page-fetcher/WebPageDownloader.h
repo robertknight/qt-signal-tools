@@ -16,7 +16,7 @@ class PageFetcher : public QObject
 		void fetchPage(const QUrl& url, const QtCallback1<QByteArray>& callback);
 
 	private Q_SLOTS:
-		void requestFinished();
+		void requestFinished(QNetworkReply*, const QtCallback1<QByteArray>& callback);
 
 	private:
 		QNetworkAccessManager* m_manager;

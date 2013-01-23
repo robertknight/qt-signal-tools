@@ -71,7 +71,7 @@ void QtCallbackBase::bind(const QVariant& value)
 }
 
 bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericArgument& a2, const QGenericArgument& a3,
-                                    const QGenericArgument& a4, const QGenericArgument& a5, const QGenericArgument& a6)
+                                    const QGenericArgument& a4, const QGenericArgument& a5, const QGenericArgument& a6) const
 {
 	if (!d->receiver)
 	{

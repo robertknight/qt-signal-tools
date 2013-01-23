@@ -23,7 +23,7 @@ class QtCallbackBase
 					        const QGenericArgument& arg3 = QGenericArgument(),
 							const QGenericArgument& arg4 = QGenericArgument(),
 							const QGenericArgument& arg5 = QGenericArgument(),
-							const QGenericArgument& arg6 = QGenericArgument());
+							const QGenericArgument& arg6 = QGenericArgument()) const;
 
 		int parameterCount() const;
 
@@ -59,10 +59,14 @@ QGenericArgument makeQtArg(const T& arg)
 			   QtCallback ## typeCount() {}\
 			   QtCallback ## typeCount(QObject* receiver, const char* method)\
 				: QtCallbackBase(receiver,method) {} \
-			   bool invoke(argList) \
+			   bool invoke(argList) const \
 			   { return invokeWithArgs(makeQtArgList); } \
-			   bool operator()(argList) \
+			   bool operator()(argList) const \
 			   { return invokeWithArgs(makeQtArgList); } \
+			   using QtCallbackBase::bind; \
+			   template <class T> \
+		       QtCallback ## typeCount& bind(const T& value) \
+			   { bind(QVariant::fromValue(value)); return *this; } \
     }
 
 #define MACRO_COMMA ,
