@@ -63,6 +63,7 @@ class QtCallbackProxy : public QObject
 
 			Callback(const QtCallbackBase& _callback)
 				: qtCallback(_callback)
+				, function(CallbackFunction())
 			{}
 
 			Callback(const CallbackFunction& _function)
