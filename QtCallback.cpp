@@ -4,6 +4,11 @@
 #include <QtCore/QMetaMethod>
 #include <QtCore/QMetaObject>
 
+const char* variantTypeName(const QVariant& value)
+{
+	return QMetaType::typeName(value.userType());
+}
+
 QtCallbackBase::QtCallbackBase()
 	: d(new Data)
 {
@@ -33,6 +38,11 @@ int QtCallbackBase::parameterCount() const
 	return d->method.parameterTypes().count();
 }
 
+int QtCallbackBase::parameterType(int index) const
+{
+	return QMetaType::type(d->method.parameterTypes().at(index));
+}
+
 QtCallbackBase::QtCallbackBase(const QtCallbackBase& other)
 	: d(other.d)
 {
@@ -40,7 +50,8 @@ QtCallbackBase::QtCallbackBase(const QtCallbackBase& other)
 
 void QtCallbackBase::bind(int index, const QVariant& value)
 {
-	Q_ASSERT(index < parameterCount());
+	Q_ASSERT_X(index < parameterCount(), Q_FUNC_INFO, "Argument index is out of range");
+	Q_ASSERT_X(parameterType(index) == value.userType(), Q_FUNC_INFO, "Argument type is incorrect");
 
 	for (int i=0; i < d->args.count(); i++)
 	{
@@ -66,7 +77,7 @@ void QtCallbackBase::bind(const QVariant& value)
 			++minUnusedArg;
 		}
 	}
-	Q_ASSERT(minUnusedArg < parameterCount());
+	Q_ASSERT_X(minUnusedArg < parameterCount(), Q_FUNC_INFO, "More parameters have been bound to the callback that the connected method accepts");
 	bind(minUnusedArg, value);
 }
 
@@ -101,9 +112,9 @@ bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericAr
 			{
 				// in Qt 4, QMetaMethod only provides access to the type name string.
 				// in Qt 5 we could compare the type IDs instead
-				const char* actualType = QMetaType::typeName(boundArg.value.userType());
 				const char* expectedType = params[i].constData();
-				if (strcmp(actualType, expectedType))
+				const char* actualType = variantTypeName(boundArg.value);
+				if (strcmp(expectedType, actualType) != 0)
 				{
 					qWarning() << "Unable to invoke callback.  Type of bound arg at index" << i << QString(actualType)
 					           << "does not match expected type" << QString(expectedType);

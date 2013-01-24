@@ -26,6 +26,7 @@ class QtCallbackBase
 							const QGenericArgument& arg6 = QGenericArgument()) const;
 
 		int parameterCount() const;
+		int parameterType(int index) const;
 
 	private:
 		struct Data : public QSharedData
