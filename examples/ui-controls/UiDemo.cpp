@@ -42,8 +42,14 @@ int main(int argc, char** argv)
 	QtCallbackProxy::connectCallback(button2, SIGNAL(clicked(bool)),
 	  QtCallback(slider, SLOT(setValue(int))).bind(50));
 
+#ifdef ENABLE_QTCALLBACK_TR1_FUNCTION
+	// if tr1/function is available, use that to create a callback
+	QtCallbackProxy::connectCallback(button3, SIGNAL(clicked(bool)),
+	  std::tr1::function<void()>(std::tr1::bind(&QAbstractSlider::setValue, slider, 80)));
+#else
 	QtCallbackProxy::connectCallback(button3, SIGNAL(clicked(bool)),
 	  QtCallback(slider, SLOT(setValue(int))).bind(80));
+#endif
 
 	QtCallbackProxy::connectEvent(slider, QEvent::Enter,
 	  QtCallback(focusLabel, SLOT(setVisible(bool))).bind(true));
