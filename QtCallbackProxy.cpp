@@ -43,6 +43,46 @@ void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const Callback& 
 	m_eventBindings << binding;
 }
 
+void QtCallbackProxy::unbind(QObject* sender, const char* signal)
+{
+	int signalIndex = qtObjectSignalIndex(sender, signal);
+	QMutableVectorIterator<Binding> iter(m_bindings);
+	while (iter.hasNext())
+	{
+		const Binding& binding = iter.next();
+		if (binding.sender == sender &&
+		    binding.signalIndex == signalIndex)
+		{
+			int memberOffset = QObject::staticMetaObject.methodCount();
+			QMetaObject::disconnect(sender, signalIndex, this, memberOffset);
+			iter.remove();
+		}
+	}
+}
+
+void QtCallbackProxy::unbind(QObject* sender, QEvent::Type event)
+{
+	int activeBindingCount = 0;
+	QMutableVectorIterator<EventBinding> iter(m_eventBindings);
+	while (iter.hasNext())
+	{
+		const EventBinding& binding = iter.next();
+		if (binding.sender == sender)
+		{
+			++activeBindingCount;
+			if (binding.eventType == event)
+			{
+				--activeBindingCount;
+				iter.remove();
+			}
+		}
+	}
+	if (activeBindingCount == 0)
+	{
+		sender->removeEventFilter(this);
+	}
+}
+
 QtCallbackProxy* installCallbackProxy(QObject* sender)
 {
 	// We currently create one proxy object per sender.
@@ -74,10 +114,22 @@ void QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const
 	proxy->bind(sender, signal, callback);
 }
 
+void QtCallbackProxy::disconnectCallbacks(QObject* sender, const char* signal)
+{
+	QtCallbackProxy* proxy = installCallbackProxy(sender);
+	proxy->unbind(sender, signal);
+}
+
 void QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const Callback& callback, EventFilterFunc filter)
 {
 	QtCallbackProxy* proxy = installCallbackProxy(sender);
 	proxy->bind(sender, event, callback, filter);
+}
+
+void QtCallbackProxy::disconnectEvent(QObject* sender, QEvent::Type event)
+{
+	QtCallbackProxy* proxy = installCallbackProxy(sender);
+	proxy->unbind(sender, event);
 }
 
 const QtCallbackProxy::Binding* QtCallbackProxy::matchBinding(QObject* sender, int signalIndex) const
@@ -120,12 +172,12 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 					binding->callback.function();
 				} else {
 					QGenericArgument args[6] = {
-						QGenericArgument(binding->paramType(0), arguments[0]),
-						QGenericArgument(binding->paramType(1), arguments[1]),
-						QGenericArgument(binding->paramType(2), arguments[2]),
-						QGenericArgument(binding->paramType(3), arguments[3]),
-						QGenericArgument(binding->paramType(4), arguments[4]),
-						QGenericArgument(binding->paramType(5), arguments[5])
+						QGenericArgument(binding->paramType(0), arguments[1]),
+						QGenericArgument(binding->paramType(1), arguments[2]),
+						QGenericArgument(binding->paramType(2), arguments[3]),
+						QGenericArgument(binding->paramType(3), arguments[4]),
+						QGenericArgument(binding->paramType(4), arguments[5]),
+						QGenericArgument(binding->paramType(5), arguments[6])
 					};
 					binding->callback.qtCallback.invokeWithArgs(args[0], args[1], args[2], args[3], args[4], args[5]);
 				}

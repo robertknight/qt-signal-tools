@@ -1,4 +1,4 @@
 TEMPLATE = subdirs
-SUBDIRS = examples/web-page-fetcher \
+SUBDIRS = tests \
+          examples/web-page-fetcher \
           examples/ui-controls
-
