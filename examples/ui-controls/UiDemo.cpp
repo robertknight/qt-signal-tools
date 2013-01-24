@@ -2,9 +2,15 @@
 
 #include <QtGui/QApplication>
 #include <QtGui/QLabel>
+#include <QtGui/QMouseEvent>
 #include <QtGui/QPushButton>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QSlider>
+
+bool matchRightClick(QObject*, QEvent* event)
+{
+	return static_cast<QMouseEvent*>(event)->button() == Qt::RightButton;
+}
 
 int main(int argc, char** argv)
 {
@@ -17,6 +23,8 @@ int main(int argc, char** argv)
 	QPushButton* button1 = new QPushButton("Set to 10%");
 	QPushButton* button2 = new QPushButton("Set to 50%");
 	QPushButton* button3 = new QPushButton("Set to 80%");
+
+	QLabel* hideMeLabel = new QLabel("Right click me to close");
 
 	QLabel* focusLabel = new QLabel("Slider is hovered");
 	focusLabel->setVisible(false);
@@ -43,6 +51,9 @@ int main(int argc, char** argv)
 	QtCallbackProxy::connectEvent(slider, QEvent::Leave,
 	  QtCallback(focusLabel, SLOT(setVisible(bool))).bind(false));
 
+	QtCallbackProxy::connectEvent(hideMeLabel, QEvent::MouseButtonRelease,
+	  QtCallback(widget, SLOT(close())), matchRightClick);
+
 	layout->addWidget(button1);
 	layout->addWidget(button2);
 	layout->addWidget(button3);
@@ -50,6 +61,8 @@ int main(int argc, char** argv)
 	layout->addWidget(focusLabel);
 	
 	layout->addStretch();
+	
+	layout->addWidget(hideMeLabel);
 
 	widget->show();
 
