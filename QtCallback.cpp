@@ -23,12 +23,9 @@ QtCallbackBase::QtCallbackBase(QObject* receiver, const char* method)
 	d->receiver = receiver;
 
 	int methodIndex = receiver->metaObject()->indexOfMethod(method+1);
-	if (methodIndex >= 0)
-	{
+	if (methodIndex >= 0) {
 		d->method = receiver->metaObject()->method(methodIndex);
-	}
-	else
-	{
+	} else {
 		qWarning() << "Receiver" << receiver << "has no such method" << method;
 	}
 }
@@ -70,10 +67,8 @@ void QtCallbackBase::bind(int index, const QVariant& value)
 void QtCallbackBase::bind(const QVariant& value)
 {
 	int minUnusedArg = 0;
-	for (int i=0; i < d->args.count(); i++)
-	{
-		if (d->args[i].position == minUnusedArg)
-		{
+	for (int i=0; i < d->args.count(); i++) {
+		if (d->args[i].position == minUnusedArg) {
 			++minUnusedArg;
 		}
 	}
@@ -84,14 +79,12 @@ void QtCallbackBase::bind(const QVariant& value)
 bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericArgument& a2, const QGenericArgument& a3,
                                     const QGenericArgument& a4, const QGenericArgument& a5, const QGenericArgument& a6) const
 {
-	if (!d->receiver)
-	{
+	if (!d->receiver) {
 		// receiver was destroyed before callback could be invoked
 		qWarning() << "Unable to invoke callback.  Receiver was destroyed";
 		return false;
 	}
-	if (d->method.methodIndex() < 0)
-	{
+	if (d->method.methodIndex() < 0) {
 		// method was not found on receiver
 		qWarning() << "Unable to invoke callback.  Method not found";
 		return false;
@@ -103,13 +96,10 @@ bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericAr
 	QList<QByteArray> params = d->method.parameterTypes();
 	
 	int paramCount = parameterCount();
-	for (int i = 0; i < paramCount; i++)
-	{
-		for (int k = 0; k < d->args.count(); k++)
-		{
+	for (int i = 0; i < paramCount; i++) {
+		for (int k = 0; k < d->args.count(); k++) {
 			const Data::Arg& boundArg = d->args.at(k);
-			if (boundArg.position == i)
-			{
+			if (boundArg.position == i) {
 				// in Qt 4, QMetaMethod only provides access to the type name string.
 				// in Qt 5 we could compare the type IDs instead
 				const char* expectedType = params[i].constData();
@@ -125,11 +115,10 @@ bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericAr
 				break;
 			}
 		}
-		if (!args[i].data())
-		{
+
+		if (!args[i].data()) {
 			args[i] = invokeArgs[invokeArgIndex];
-			if (!args[i].data())
-			{
+			if (!args[i].data()) {
 				// not enough arguments supplied
 				qWarning() << "Unable to invoke callback.  Argument" << i << "was not bound";
 				return false;
@@ -138,8 +127,7 @@ bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericAr
 		}
 	}
 
-	if (!d->method.invoke(d->receiver.data(), args[0], args[1], args[2], args[3], args[4], args[5], args[6]))
-	{
+	if (!d->method.invoke(d->receiver.data(), args[0], args[1], args[2], args[3], args[4], args[5], args[6])) {
 		qWarning() << "Failed to invoke method" << d->method.signature();
 		return false;
 	}

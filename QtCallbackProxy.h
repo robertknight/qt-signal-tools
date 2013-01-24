@@ -116,8 +116,7 @@ class QtCallbackProxy : public QObject
 
 			const char* paramType(int index) const
 			{
-				if (index >= paramTypes.count())
-				{
+				if (index >= paramTypes.count()) {
 					return 0;
 				}
 				return paramTypes.at(index).constData();

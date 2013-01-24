@@ -60,8 +60,7 @@ void WebPageDownloader::fetchedPage(const QString& fileName, const QUrl& url, co
 	file.close();
 
 	--m_pendingRequests;
-	if (m_pendingRequests == 0)
-	{
+	if (m_pendingRequests == 0) {
 		emit finished();
 	}
 }
