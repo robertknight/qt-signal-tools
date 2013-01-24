@@ -47,13 +47,27 @@ void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtCallback
 
 QtCallbackProxy* installCallbackProxy(QObject* sender)
 {
+	// We currently create one proxy object per sender.
+	//
+	// On the one hand, this makes signal/event dispatches cheaper
+	// because we only have to match on signals/events for that sender
+	// in eventFilter() and qt_metacall().  Within QObject's internals,
+	// there are also some operations that are linear in the number of
+	// signal/slot connections.
+	//
+	// The downside of having more proxy objects is the cost per instance
+	// and the time required to instantiate a proxy object the first time
+	// a callback is installed for a given sender
+	// 
+	QObject* proxyTarget = sender;
 	const char* callbackProperty = "qt_callback_handler";
-	QtCallbackProxy* callbackProxy = sender->property(callbackProperty).value<QtCallbackProxy*>();
+	QtCallbackProxy* callbackProxy = proxyTarget->property(callbackProperty).value<QtCallbackProxy*>();
 	if (!callbackProxy)
 	{
-		callbackProxy = new QtCallbackProxy(sender);
-		sender->setProperty(callbackProperty, QVariant::fromValue(callbackProxy));
+		callbackProxy = new QtCallbackProxy(proxyTarget);
+		proxyTarget->setProperty(callbackProperty, QVariant::fromValue(callbackProxy));
 	}
+
 	return callbackProxy;
 }
 
