@@ -11,6 +11,7 @@ class TestQtCallback : public QObject
 		void testInvoke();
 		void testSignalProxy();
 		void testEventProxy();
+		void testSignalProxyTr1();
 };
 
 class CallbackTester : public QObject

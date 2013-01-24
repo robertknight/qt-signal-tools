@@ -2,6 +2,10 @@
 
 #include <QtCore/QDebug>
 
+#ifdef ENABLE_QTCALLBACK_TR1_FUNCTION
+using namespace std::tr1;
+#endif
+
 void TestQtCallback::testInvoke()
 {
 	CallbackTester tester;
@@ -52,5 +56,22 @@ void TestQtCallback::testEventProxy()
 	QCoreApplication::sendEvent(&tester, &event);
 	QCOMPARE(tester.values, QList<int>());
 }
+
+void TestQtCallback::testSignalProxyTr1()
+{
+#ifdef ENABLE_QTCALLBACK_TR1_FUNCTION
+	CallbackTester tester;
+	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	  function<void()>(bind(&CallbackTester::addValue, &tester, 18)));
+	tester.emitASignal(42);
+	QCOMPARE(tester.values, QList<int>() << 18);
+	tester.values.clear();
+
+	QtCallbackProxy::disconnectCallbacks(&tester, SIGNAL(aSignal(int)));
+	tester.emitASignal(19);
+	QCOMPARE(tester.values, QList<int>());
+#endif
+}
+
 
 QTEST_MAIN(TestQtCallback)
