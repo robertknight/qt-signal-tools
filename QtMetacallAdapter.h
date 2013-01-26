@@ -8,6 +8,18 @@
 #include <QtCore/QDebug>
 
 template <class T>
+struct RemovePtr
+{
+	typedef T type;
+};
+
+template <class T>
+struct RemovePtr<T*>
+{
+	typedef T type;
+};
+
+template <class T>
 struct FunctionTraits;
 
 template <class R>
@@ -105,15 +117,15 @@ struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 	}
 };
 
-template <class T,int>
+template <class Functor, class Signature, int>
 struct QtMetacallAdapterImpl;
 
-template <template <class F> class Functor, class F>
-struct QtMetacallAdapterImpl<Functor<F>,0>
-  : QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,0> >
+template <class Functor, class Signature>
+struct QtMetacallAdapterImpl<Functor,Signature,0>
+  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,0> >
 {
-	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,0> > Base;
-	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
+	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,0> > Base;
+	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
 
 	virtual bool invoke(const QGenericArgument*,int) const {
 		Base::functor();
@@ -127,18 +139,18 @@ struct QtMetacallAdapterImpl<Functor<F>,0>
 
 // extract the Nth argument from a QGenericArgument array and cast
 // to the type expected by the Nth functor parameter
-#define QMA_CAST_ARG(N) *reinterpret_cast<typename FunctionTraits<F>::arg##N##_type*>(args[N].data())
+#define QMA_CAST_ARG(N) *reinterpret_cast<typename FunctionTraits<Signature>::arg##N##_type*>(args[N].data())
 
 // check that the Nth argument type from a QGenericArgument array matches
 // the Nth parameter type expected by the functor
-#define QMA_CHECK_ARG_TYPE(N) Base::template argMatch<typename FunctionTraits<F>::arg##N##_type>(args[N])
+#define QMA_CHECK_ARG_TYPE(N) Base::template argMatch<typename FunctionTraits<Signature>::arg##N##_type>(args[N])
 
-template <template <class F> class Functor, class F>
-struct QtMetacallAdapterImpl<Functor<F>,1>
-  : QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,1> >
+template <class Functor, class Signature>
+struct QtMetacallAdapterImpl<Functor,Signature,1>
+  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,1> >
 {
-	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,1> > Base;
-	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
+	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,1> > Base;
+	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
 
 	virtual bool invoke(const QGenericArgument* args, int count) const {
 		if (count < 1) {
@@ -156,12 +168,12 @@ struct QtMetacallAdapterImpl<Functor<F>,1>
 	}
 };
 
-template <template <class F> class Functor, class F>
-struct QtMetacallAdapterImpl<Functor<F>,2> 
-  : QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,2> >
+template <class Functor, class Signature>
+struct QtMetacallAdapterImpl<Functor,Signature,2> 
+  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,2> >
 {
-	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,2> > Base;
-	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
+	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,2> > Base;
+	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
 
 	virtual bool invoke(const QGenericArgument* args, int count) const {
 		if (count < 2) {
@@ -179,12 +191,12 @@ struct QtMetacallAdapterImpl<Functor<F>,2>
 	}
 };
 
-template <template <class F> class Functor, class F>
-struct QtMetacallAdapterImpl<Functor<F>,3>
-  : QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,3> >
+template <class Functor, class Signature>
+struct QtMetacallAdapterImpl<Functor,Signature,3>
+  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,3> >
 {
-	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,3> > Base;
-	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
+	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,Signature,3> > Base;
+	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
 
 	virtual bool invoke(const QGenericArgument* args, int count) const {
 		if (count < 3) {
@@ -218,10 +230,18 @@ public:
 	/** Construct a QtMetacallAdapter which invokes a function object
 	 * (eg. std::function or boost::function)
 	 */
-	template <template <class F> class FunctionObject, class F>
-	QtMetacallAdapter(const FunctionObject<F>& t)
-	: m_impl(new QtMetacallAdapterImpl<FunctionObject<F>,FunctionTraits<F>::count>(t))
-	{}
+	template <template <class Signature> class FunctionObject, class Signature>
+	QtMetacallAdapter(const FunctionObject<Signature>& t)
+	: m_impl(new QtMetacallAdapterImpl<FunctionObject<Signature>,Signature,FunctionTraits<Signature>::count>(t))
+	{
+	}
+
+	template <class Functor>
+	QtMetacallAdapter(Functor f)
+	: m_impl(new QtMetacallAdapterImpl<Functor,typename RemovePtr<Functor>::type,
+	         FunctionTraits<typename RemovePtr<Functor>::type>::count>(f))
+	{
+	}
 
 	QtMetacallAdapter(const QtMetacallAdapter& other)
 	: m_impl(other.m_impl->clone())

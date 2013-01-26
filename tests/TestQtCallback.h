@@ -11,7 +11,8 @@ class TestQtCallback : public QObject
 		void testInvoke();
 		void testSignalProxy();
 		void testEventProxy();
-		void testSignalProxyTr1();
+		void testSignalToFunctionObject();
+		void testSignalToPlainFunc();
 		void testArgCast();
 };
 

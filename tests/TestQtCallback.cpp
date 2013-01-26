@@ -65,7 +65,7 @@ void TestQtCallback::testEventProxy()
 	QCOMPARE(tester.values, QList<int>());
 }
 
-void TestQtCallback::testSignalProxyTr1()
+void TestQtCallback::testSignalToFunctionObject()
 {
 	CallbackTester tester;
 	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
@@ -91,6 +91,22 @@ void TestQtCallback::testSignalProxyTr1()
 	  function<void(int)>(bind(&CallbackTester::addValue, &tester, placeholders::_1)));
 	tester.emitNoArgSignal();
 	QCOMPARE(tester.values, QList<int>());
+}
+
+int sumInputs(int value)
+{
+	static int total = 0;
+	total += value;
+	return total;
+}
+
+void TestQtCallback::testSignalToPlainFunc()
+{
+	CallbackTester tester;
+	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), sumInputs);
+	tester.emitASignal(5);
+	tester.emitASignal(8);
+	QCOMPARE(sumInputs(0), 13);
 }
 
 void TestQtCallback::testArgCast()
