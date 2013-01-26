@@ -125,6 +125,14 @@ struct QtMetacallAdapterImpl<Functor<F>,0>
 	}
 };
 
+// extract the Nth argument from a QGenericArgument array and cast
+// to the type expected by the Nth functor parameter
+#define QMA_CAST_ARG(N) *reinterpret_cast<typename FunctionTraits<F>::arg##N##_type*>(args[N].data())
+
+// check that the Nth argument type from a QGenericArgument array matches
+// the Nth parameter type expected by the functor
+#define QMA_CHECK_ARG_TYPE(N) Base::template argMatch<typename FunctionTraits<F>::arg##N##_type>(args[N])
+
 template <template <class F> class Functor, class F>
 struct QtMetacallAdapterImpl<Functor<F>,1>
   : QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,1> >
@@ -136,7 +144,7 @@ struct QtMetacallAdapterImpl<Functor<F>,1>
 		if (count < 1) {
 			return false;
 		}
-		Base::functor(*reinterpret_cast<typename FunctionTraits<F>::arg0_type*>(args[0].data()));
+		Base::functor(QMA_CAST_ARG(0));
 		return true;
 	}
 
@@ -144,7 +152,7 @@ struct QtMetacallAdapterImpl<Functor<F>,1>
 		if (count < 1) {
 			return false;
 		}
-		return Base::template argMatch<typename FunctionTraits<F>::arg0_type>(args[0]);
+		return QMA_CHECK_ARG_TYPE(0);
 	}
 };
 
@@ -159,8 +167,7 @@ struct QtMetacallAdapterImpl<Functor<F>,2>
 		if (count < 2) {
 			return false;
 		}
-		Base::functor(*reinterpret_cast<typename FunctionTraits<F>::arg0_type*>(args[0].data()),
-		              *reinterpret_cast<typename FunctionTraits<F>::arg1_type*>(args[1].data()));
+		Base::functor(QMA_CAST_ARG(0), QMA_CAST_ARG(1));
 		return true;
 	}
 
@@ -168,8 +175,7 @@ struct QtMetacallAdapterImpl<Functor<F>,2>
 		if (count < 2) {
 			return false;
 		}
-		return Base::template argMatch<typename FunctionTraits<F>::arg0_type>(args[0]) &&
-		       Base::template argMatch<typename FunctionTraits<F>::arg1_type>(args[1]);
+		return QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1);
 	}
 };
 
@@ -184,9 +190,7 @@ struct QtMetacallAdapterImpl<Functor<F>,3>
 		if (count < 3) {
 			return false;
 		}
-		Base::functor(*reinterpret_cast<typename FunctionTraits<F>::arg0_type*>(args[0].data()),
-		              *reinterpret_cast<typename FunctionTraits<F>::arg1_type*>(args[1].data()),
-				      *reinterpret_cast<typename FunctionTraits<F>::arg2_type*>(args[2].data()));
+		Base::functor(QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2));
 		return true;
 	}
 
@@ -194,9 +198,7 @@ struct QtMetacallAdapterImpl<Functor<F>,3>
 		if (count < 3) {
 			return false;
 		}
-		return Base::template argMatch<typename FunctionTraits<F>::arg0_type>(args[0]) &&
-		       Base::template argMatch<typename FunctionTraits<F>::arg1_type>(args[1]) &&
-			   Base::template argMatch<typename FunctionTraits<F>::arg2_type>(args[2]);
+		return QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2);
 	}
 };
 
