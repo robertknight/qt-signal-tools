@@ -28,6 +28,11 @@ class QtCallbackBase
 		int parameterCount() const;
 		int parameterType(int index) const;
 
+		int unboundParameterCount() const;
+		int unboundParameterType(int index) const;
+
+		bool isBound(int index) const;
+
 	private:
 		struct Data : public QSharedData
 		{

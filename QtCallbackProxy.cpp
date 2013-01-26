@@ -14,6 +14,15 @@ QtCallbackProxy::QtCallbackProxy(QObject* parent)
 {
 }
 
+bool QtCallbackProxy::checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes)
+{
+	int argTypes[10] = {0};
+	for (int i=0; i < paramTypes.count(); i++) {
+		argTypes[i] = QMetaType::type(paramTypes.at(i).data());
+	}
+	return callback.canInvoke(argTypes, paramTypes.count());
+}
+
 void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
@@ -24,6 +33,11 @@ void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 
 	Binding binding(sender, signalIndex, callback);
 	binding.paramTypes = sender->metaObject()->method(signalIndex).parameterTypes();
+
+	if (!checkTypeMatch(callback, binding.paramTypes)) {
+		qWarning() << "Sender and receiver types do not match for" << signal+1;
+		return;
+	}
 
 	int memberOffset = QObject::staticMetaObject.methodCount();
 
@@ -37,6 +51,11 @@ void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 
 void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
+	if (!callback.canInvoke(0,0)) {
+		qWarning() << "Callback does not take 0 arguments";
+		return;
+	}
+
 	sender->installEventFilter(this);
 
 	EventBinding binding(sender, event, callback, filter);
@@ -176,7 +195,7 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 					QGenericArgument(binding->paramType(4), arguments[5]),
 					QGenericArgument(binding->paramType(5), arguments[6])
 				};
-				binding->callback.invoke(args, sizeof(args)/sizeof(*args));
+				binding->callback.invoke(args, binding->paramTypes.count());
 			} else {
 				const char* signalName = sender->metaObject()->method(signalIndex).signature();
 				failInvoke(QString("Unable to find matching binding for signal %1").arg(signalName));

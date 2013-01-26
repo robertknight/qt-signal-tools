@@ -26,6 +26,11 @@ class CallbackTester : public QObject
 			emit aSignal(arg);
 		}
 
+		void emitNoArgSignal()
+		{
+			emit noArgSignal();
+		}
+
 	public Q_SLOTS:
 		void addValue(int value)
 		{
@@ -34,4 +39,5 @@ class CallbackTester : public QObject
 
 	Q_SIGNALS:
 		void aSignal(int arg);
+		void noArgSignal();
 };

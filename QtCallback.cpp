@@ -40,6 +40,43 @@ int QtCallbackBase::parameterType(int index) const
 	return QMetaType::type(d->method.parameterTypes().at(index));
 }
 
+bool QtCallbackBase::isBound(int index) const
+{
+	for (int i=0; i < d->args.count(); i++) {
+		if (d->args.at(i).position == index) {
+			return true;
+		}
+	}
+	return false;
+}
+
+int QtCallbackBase::unboundParameterCount() const
+{
+	int unboundCount = 0;
+	int count = parameterCount();
+	for (int i=0; i < count; i++) {
+		if (!isBound(i)) {
+			++unboundCount;
+		}
+	}
+	return unboundCount;
+}
+
+int QtCallbackBase::unboundParameterType(int index) const
+{
+	int count = parameterCount();
+	int unboundCount = 0;
+	for (int i=0; i < count; i++) {
+		if (!isBound(i)) {
+			if (unboundCount == index) {
+				return parameterType(index);
+			}
+			++unboundCount;
+		}
+	}
+	return -1;
+}
+
 QtCallbackBase::QtCallbackBase(const QtCallbackBase& other)
 	: d(other.d)
 {

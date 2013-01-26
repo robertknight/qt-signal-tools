@@ -5,6 +5,8 @@
 #include <QtCore/QMetaObject>
 #include <QtCore/QScopedPointer>
 
+#include <QtCore/QDebug>
+
 template <class T>
 struct FunctionTraits;
 
@@ -39,8 +41,9 @@ struct FunctionTraits<R(T1,T2,T3)> : FunctionTraits<R(T1,T2)>
 struct QtMetacallAdapterImplIface
 {
 	virtual ~QtMetacallAdapterImplIface() {}
-	virtual void invoke(const QGenericArgument* args, int count) const = 0;
+	virtual bool invoke(const QGenericArgument* args, int count) const = 0;
 	virtual QtMetacallAdapterImplIface* clone() const = 0;
+	virtual bool canInvoke(int* args, int count) const = 0;
 };
 
 struct QtCallbackImpl : public QtMetacallAdapterImplIface
@@ -51,7 +54,7 @@ struct QtCallbackImpl : public QtMetacallAdapterImplIface
 	: callback(_callback)
 	{}
 
-	virtual void invoke(const QGenericArgument* _args, int count) const {
+	virtual bool invoke(const QGenericArgument* _args, int count) const {
 		const int MAX_ARGS = 6;
 		QGenericArgument args[MAX_ARGS];
 		for (int i=0; i < MAX_ARGS; i++) {
@@ -61,11 +64,24 @@ struct QtCallbackImpl : public QtMetacallAdapterImplIface
 				args[i] = QGenericArgument();
 			}
 		}
-		callback.invokeWithArgs(args[0], args[1], args[2], args[3], args[4], args[5]);
+		return callback.invokeWithArgs(args[0], args[1], args[2], args[3], args[4], args[5]);
 	}
 
 	virtual QtMetacallAdapterImplIface* clone() const {
 		return new QtCallbackImpl(callback);
+	}
+
+	virtual bool canInvoke(int* args, int count) const {
+		int unboundCount = callback.unboundParameterCount();
+		if (count < unboundCount) {
+			return false;
+		}
+		for (int i=0; i < unboundCount; i++) {
+			if (callback.unboundParameterType(i) != args[i]) {
+				return false;
+			}
+		}
+		return true;
 	}
 };
 
@@ -81,6 +97,11 @@ struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 	virtual QtMetacallAdapterImplIface* clone() const {
 		return new Derived(functor);
 	}
+
+	template <class T>
+	static bool argMatch(int arg) {
+		return qMetaTypeId<T>() == arg;
+	}
 };
 
 template <class T,int>
@@ -93,8 +114,13 @@ struct QtMetacallAdapterImpl<Functor<F>,0>
 	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,0> > Base;
 	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
 
-	virtual void invoke(const QGenericArgument*,int) const {
+	virtual bool invoke(const QGenericArgument*,int) const {
 		Base::functor();
+		return true;
+	}
+
+	virtual bool canInvoke(int*, int) const {
+		return true;
 	}
 };
 
@@ -105,9 +131,19 @@ struct QtMetacallAdapterImpl<Functor<F>,1>
 	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,1> > Base;
 	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
 
-	virtual void invoke(const QGenericArgument* args, int count) const {
-		Q_UNUSED(count);
+	virtual bool invoke(const QGenericArgument* args, int count) const {
+		if (count < 1) {
+			return false;
+		}
 		Base::functor(*reinterpret_cast<typename FunctionTraits<F>::arg0_type*>(args[0].data()));
+		return true;
+	}
+
+	virtual bool canInvoke(int* args, int count) const {
+		if (count < 1) {
+			return false;
+		}
+		return Base::template argMatch<typename FunctionTraits<F>::arg0_type>(args[0]);
 	}
 };
 
@@ -118,10 +154,21 @@ struct QtMetacallAdapterImpl<Functor<F>,2>
 	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,2> > Base;
 	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
 
-	virtual void invoke(const QGenericArgument* args, int count) const {
-		Q_UNUSED(count);
+	virtual bool invoke(const QGenericArgument* args, int count) const {
+		if (count < 2) {
+			return false;
+		}
 		Base::functor(*reinterpret_cast<typename FunctionTraits<F>::arg0_type*>(args[0].data()),
 		              *reinterpret_cast<typename FunctionTraits<F>::arg1_type*>(args[1].data()));
+		return true;
+	}
+
+	virtual bool canInvoke(int* args, int count) const {
+		if (count < 2) {
+			return false;
+		}
+		return Base::template argMatch<typename FunctionTraits<F>::arg0_type>(args[0]) &&
+		       Base::template argMatch<typename FunctionTraits<F>::arg1_type>(args[1]);
 	}
 };
 
@@ -132,11 +179,23 @@ struct QtMetacallAdapterImpl<Functor<F>,3>
 	typedef QtMetacallAdapterImplBase<Functor<F>,QtMetacallAdapterImpl<Functor<F>,3> > Base;
 	QtMetacallAdapterImpl(const Functor<F>& functor) : Base(functor) {}
 
-	virtual void invoke(const QGenericArgument* args, int count) const {
-		Q_UNUSED(count);
+	virtual bool invoke(const QGenericArgument* args, int count) const {
+		if (count < 3) {
+			return false;
+		}
 		Base::functor(*reinterpret_cast<typename FunctionTraits<F>::arg0_type*>(args[0].data()),
 		              *reinterpret_cast<typename FunctionTraits<F>::arg1_type*>(args[1].data()),
 				      *reinterpret_cast<typename FunctionTraits<F>::arg2_type*>(args[2].data()));
+		return true;
+	}
+
+	virtual bool canInvoke(int* args, int count) const {
+		if (count < 3) {
+			return false;
+		}
+		return Base::template argMatch<typename FunctionTraits<F>::arg0_type>(args[0]) &&
+		       Base::template argMatch<typename FunctionTraits<F>::arg1_type>(args[1]) &&
+			   Base::template argMatch<typename FunctionTraits<F>::arg2_type>(args[2]);
 	}
 };
 
@@ -168,9 +227,14 @@ public:
 		return *this;
 	}
 
-	void invoke(const QGenericArgument* args, int count) const
+	bool invoke(const QGenericArgument* args, int count) const
 	{
-		m_impl->invoke(args, count);
+		return m_impl->invoke(args, count);
+	}
+
+	bool canInvoke(int* args, int count) const
+	{
+		return m_impl->canInvoke(args, count);
 	}
 	
 private:

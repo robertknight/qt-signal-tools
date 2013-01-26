@@ -42,6 +42,12 @@ void TestQtCallback::testSignalProxy()
 	  QtCallback(&tester, SLOT(addValue(int))).bind(10));
 	tester.emitASignal(11);
 	QCOMPARE(tester.values, QList<int>() << 10);
+	tester.values.clear();
+
+	QtCallbackProxy::connectCallback(&tester, SIGNAL(noArgSignal()),
+	  QtCallback(&tester, SLOT(addValue(int))));
+	tester.emitNoArgSignal();
+	QCOMPARE(tester.values, QList<int>());
 }
 
 void TestQtCallback::testEventProxy()
@@ -77,6 +83,15 @@ void TestQtCallback::testSignalProxyTr1()
 	  function<void(int)>(bind(&CallbackTester::addValue, &tester, placeholders::_1)));
 	tester.emitASignal(39);
 	QCOMPARE(tester.values, QList<int>() << 39);
+
+	// check that a signal arg count mismatch
+	// is caught
+	tester.values.clear();
+	QtCallbackProxy::connectCallback(&tester, SIGNAL(noArgSignal()),
+	  function<void(int)>(bind(&CallbackTester::addValue, &tester, placeholders::_1)));
+	tester.emitNoArgSignal();
+	QCOMPARE(tester.values, QList<int>());
+
 }
 
 QTEST_MAIN(TestQtCallback)

@@ -125,6 +125,8 @@ class QtCallbackProxy : public QObject
 		const Binding* matchBinding(QObject* sender, int signalIndex) const;
 		void failInvoke(const QString& error);
 
+		static bool checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes);
+
 		QVector<Binding> m_bindings;
 		QVector<EventBinding> m_eventBindings;
 };
