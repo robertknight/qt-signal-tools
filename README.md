@@ -56,3 +56,6 @@ button.click();
 qt-signal-tools includes some code adapted from Qt's classes (such as QSignalSpy).
 Hence it is under the same license as Qt itself (LGPL).
 
+## Related Projects
+
+Qt Signal Adapters - Library for connecting signals to Boost function objects: http://sourceforge.net/projects/qtsignaladapter/
