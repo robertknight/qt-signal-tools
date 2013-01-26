@@ -4,7 +4,12 @@ qt-signal-tools is a collection of utility classes related to signal and slots i
 
 ## Requirements
 
-Requires Qt 4.8
+ * Qt 4.8*
+ * For connecting signals and events to arbitrary functions, a function wrapper
+is needed, such as `std::tr1::function` (C++03 compilers with a TR1 library), `boost::function` or
+`std::function` (C++11 std library).
+
+(* Could be adapted for earlier versions of Qt 4 if necessary)
 
 ## Classes
 
@@ -33,13 +38,12 @@ a particular type of event.  The callbacks can be signals and slots
 (via `QtCallback`) or arbitrary functions using `tr1::function`, `std::function`, `boost::function` or
 a similar wrapper.
 
-This provides a way to pass additional arguments than those provided by the signal to a slot
-when the signal is emitted.
+Qt 5 provides support for connecting signals to arbitrary functions out of the box and to lambdas
+when using C++11.  QtCallbackProxy emulates this for Qt 4.
 
-In Qt 5 with C++11 support this is made much easier by the ability to connect signals to lambdas
-and functions (or via Qt 5 with `tr1::bind` and `tr1::function`);
-
-QtCallbackProxy emulates this for Qt 4.
+As well as being able to connect signals to functions that are not slots, this also provides
+a way to pass additional arguments to the receiver other than those from the signal using `QtCallback::bind()`
+or `std::tr1::bind()`.
 
 Usage:
 ```cpp
@@ -54,8 +58,7 @@ button.click();
 
 ## License
 
-qt-signal-tools includes some code adapted from Qt's classes (such as QSignalSpy).
-Hence it is under the same license as Qt itself (LGPL).
+qt-signal-tools is licensed under the BSD license.
 
 ## Related Projects
 
