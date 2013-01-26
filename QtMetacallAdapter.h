@@ -109,8 +109,11 @@ struct QtCallbackImpl : public QtMetacallAdapterImplIface
 template <class Functor, class Derived>
 struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 {
+	// 'traits' type provides access to the number and types of
+	// the functor's arguments
 	typedef FunctionTraits<typename ExtractSignature<Functor>::type> traits;
 
+	// the function pointer or function object to invoke
 	Functor functor;
 
 	QtMetacallAdapterImplBase(const Functor& _f)
@@ -121,9 +124,11 @@ struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 		return new Derived(functor);
 	}
 
+	// helper for checking at runtime that the type of a signal
+	// argument matches the type of the receiver's corresponding argument
 	template <class T>
-	static bool argMatch(int arg) {
-		return qMetaTypeId<T>() == arg;
+	static bool argMatch(int argType) {
+		return qMetaTypeId<T>() == argType;
 	}
 };
 
@@ -221,6 +226,7 @@ public:
 	{
 	}
 
+	/** Construct a QtMetacallAdapter which invokes a plain function */
 	template <class Functor>
 	QtMetacallAdapter(Functor f)
 	: m_impl(new QtMetacallAdapterImpl<Functor, FunctionTraits<typename ExtractSignature<Functor>::type>::count>(f))
