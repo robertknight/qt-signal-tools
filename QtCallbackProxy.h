@@ -1,15 +1,11 @@
 #pragma once
 
-#include "QtCallback.h"
-
-#ifdef ENABLE_QTCALLBACK_TR1_FUNCTION
-#include <tr1/functional>
-#endif
+#include "QtMetacallAdapter.h"
 
 #include <QtCore/QEvent>
 #include <QtCore/QVector>
 
-/** Utility class which provides a way to invoke a QtCallback when an
+/** Utility class which provides a way to invoke a functor when an
  * object emits a signal.
  * 
  * Often when a slot is invoked in response to a signal, it would be useful
@@ -20,8 +16,7 @@
  *
  * QtCallbackProxy provides a way to simulate this under Qt 4 with C++03 by installing
  * a proxy object between the original sender of the signal and the receiver.  The proxy
- * receives the signal, combines the arguments from the signal with those from a QtCallback
- * and then invokes the callback.
+ * receives the signal and then invokes the callback functor with the signal's arguments.
  *
  * Think of this as a more powerful version of QSignalMapper.
  *
@@ -46,34 +41,10 @@
  */
 class QtCallbackProxy : public QObject
 {
-#ifdef ENABLE_QTCALLBACK_TR1_FUNCTION
-	typedef std::tr1::function<void()> CallbackFunction;
-#else
-	typedef void (*CallbackFunction)();
-#endif
-
 	// no Q_OBJECT macro here - see qt_metacall() re-implementation
 	// below
 	
 	public:
-		struct Callback
-		{
-			Callback()
-			{}
-
-			Callback(const QtCallbackBase& _callback)
-				: qtCallback(_callback)
-				, function(CallbackFunction())
-			{}
-
-			Callback(const CallbackFunction& _function)
-				: function(_function)
-			{}
-
-			QtCallbackBase qtCallback;
-			CallbackFunction function;
-		};
-
 		typedef bool (*EventFilterFunc)(QObject*,QEvent*);
 
 		QtCallbackProxy(QObject* parent = 0);
@@ -83,12 +54,12 @@ class QtCallbackProxy : public QObject
 		 * they must be specified.  eg. Use SLOT(clicked(bool)) for a button
 		 * rather than SLOT(clicked()).
 		 */
-		void bind(QObject* sender, const char* signal, const Callback& callback);
+		void bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 
 		/** Set up a binding so that @p callback is invoked when @p sender
 		 * receives @p event.
 		 */
-		void bind(QObject* sender, QEvent::Type event, const Callback& callback, EventFilterFunc filter = 0);
+		void bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
 
 		void unbind(QObject* sender, const char* signal);
 
@@ -100,13 +71,13 @@ class QtCallbackProxy : public QObject
 
 		/** Install a proxy which invokes @p callback when @p sender emits @p signal.
 		 */
-		static void connectCallback(QObject* sender, const char* signal, const Callback& callback);
+		static void connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 
 		static void disconnectCallbacks(QObject* sender, const char* signal);
 
 		/** Install a proxy which invokes @p callback when @p sender receives @p event.
 		 */
-		static void connectEvent(QObject* sender, QEvent::Type event, const Callback& callback, EventFilterFunc filter = 0);
+		static void connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
 		static void disconnectEvent(QObject* sender, QEvent::Type event);
 
 		// re-implemented from QObject
@@ -115,7 +86,7 @@ class QtCallbackProxy : public QObject
 	private:
 		struct Binding
 		{
-			Binding(QObject* _sender = 0, int _signalIndex = -1, const Callback& _callback = Callback())
+			Binding(QObject* _sender = 0, int _signalIndex = -1, const QtMetacallAdapter& _callback = QtMetacallAdapter())
 				: sender(_sender)
 				, signalIndex(_signalIndex)
 				, callback(_callback)
@@ -132,12 +103,12 @@ class QtCallbackProxy : public QObject
 			QObject* sender;
 			int signalIndex;
 			QList<QByteArray> paramTypes;
-			Callback callback;
+			QtMetacallAdapter callback;
 		};
 
 		struct EventBinding
 		{
-			EventBinding(QObject* _sender = 0, QEvent::Type _type = QEvent::None, const Callback& _callback = Callback(),
+			EventBinding(QObject* _sender = 0, QEvent::Type _type = QEvent::None, const QtMetacallAdapter& _callback = QtMetacallAdapter(),
 			             EventFilterFunc _filter = 0)
 				: sender(_sender)
 				, eventType(_type)
@@ -148,7 +119,7 @@ class QtCallbackProxy : public QObject
 			QObject* sender;
 			QEvent::Type eventType;
 			EventFilterFunc filter;
-			Callback callback;
+			QtMetacallAdapter callback;
 		};
 
 		const Binding* matchBinding(QObject* sender, int signalIndex) const;

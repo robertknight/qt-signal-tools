@@ -14,7 +14,7 @@ QtCallbackProxy::QtCallbackProxy(QObject* parent)
 {
 }
 
-void QtCallbackProxy::bind(QObject* sender, const char* signal, const Callback& callback)
+void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
 	if (signalIndex < 0) {
@@ -35,7 +35,7 @@ void QtCallbackProxy::bind(QObject* sender, const char* signal, const Callback& 
 	m_bindings << binding;
 }
 
-void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const Callback& callback, EventFilterFunc filter)
+void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
 	sender->installEventFilter(this);
 
@@ -108,7 +108,7 @@ QtCallbackProxy* installCallbackProxy(QObject* sender)
 	return callbackProxy;
 }
 
-void QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const Callback& callback)
+void QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	QtCallbackProxy* proxy = installCallbackProxy(sender);
 	proxy->bind(sender, signal, callback);
@@ -120,7 +120,7 @@ void QtCallbackProxy::disconnectCallbacks(QObject* sender, const char* signal)
 	proxy->unbind(sender, signal);
 }
 
-void QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const Callback& callback, EventFilterFunc filter)
+void QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
 	QtCallbackProxy* proxy = installCallbackProxy(sender);
 	proxy->bind(sender, event, callback, filter);
@@ -168,19 +168,15 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 		if (methodId == 0) {
 			const Binding* binding = matchBinding(sender, signalIndex);
 			if (binding) {
-				if (binding->callback.function) {
-					binding->callback.function();
-				} else {
-					QGenericArgument args[6] = {
-						QGenericArgument(binding->paramType(0), arguments[1]),
-						QGenericArgument(binding->paramType(1), arguments[2]),
-						QGenericArgument(binding->paramType(2), arguments[3]),
-						QGenericArgument(binding->paramType(3), arguments[4]),
-						QGenericArgument(binding->paramType(4), arguments[5]),
-						QGenericArgument(binding->paramType(5), arguments[6])
-					};
-					binding->callback.qtCallback.invokeWithArgs(args[0], args[1], args[2], args[3], args[4], args[5]);
-				}
+				QGenericArgument args[6] = {
+					QGenericArgument(binding->paramType(0), arguments[1]),
+					QGenericArgument(binding->paramType(1), arguments[2]),
+					QGenericArgument(binding->paramType(2), arguments[3]),
+					QGenericArgument(binding->paramType(3), arguments[4]),
+					QGenericArgument(binding->paramType(4), arguments[5]),
+					QGenericArgument(binding->paramType(5), arguments[6])
+				};
+				binding->callback.invoke(args, sizeof(args)/sizeof(*args));
 			} else {
 				const char* signalName = sender->metaObject()->method(signalIndex).signature();
 				failInvoke(QString("Unable to find matching binding for signal %1").arg(signalName));
@@ -197,11 +193,7 @@ bool QtCallbackProxy::eventFilter(QObject* watched, QEvent* event)
 		if (binding.sender == watched &&
 		    binding.eventType == event->type() &&
 		    (!binding.filter || binding.filter(watched,event))) {
-			if (binding.callback.function) {
-				binding.callback.function();
-			} else {
-				binding.callback.qtCallback.invokeWithArgs();
-			}
+			binding.callback.invoke(0, 0);
 		}
 	}
 	return QObject::eventFilter(watched, event);
