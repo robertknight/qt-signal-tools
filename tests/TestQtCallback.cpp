@@ -91,7 +91,18 @@ void TestQtCallback::testSignalProxyTr1()
 	  function<void(int)>(bind(&CallbackTester::addValue, &tester, placeholders::_1)));
 	tester.emitNoArgSignal();
 	QCOMPARE(tester.values, QList<int>());
+}
 
+void TestQtCallback::testArgCast()
+{
+	// use function and bind() to perform a cast of the argument
+	// when it is emitted.
+	QList<qint64> list;
+	CallbackTester tester;
+	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	  function<void(int)>(bind(&QList<qint64>::push_back, &list, placeholders::_1)));
+	tester.emitASignal(42);
+	QCOMPARE(list, QList<qint64>() << 42LL);
 }
 
 QTEST_MAIN(TestQtCallback)

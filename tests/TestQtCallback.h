@@ -12,6 +12,7 @@ class TestQtCallback : public QObject
 		void testSignalProxy();
 		void testEventProxy();
 		void testSignalProxyTr1();
+		void testArgCast();
 };
 
 class CallbackTester : public QObject
