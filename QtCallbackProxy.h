@@ -5,20 +5,23 @@
 #include <QtCore/QEvent>
 #include <QtCore/QVector>
 
-/** Utility class which provides a way to invoke a functor when an
- * object emits a signal.
+/** QtCallbackProxy provides a way to connect Qt signals to QtCallback objects
+ * or function objects (wrappers around functions such as std::tr1::function,
+ * boost::function or std::function).
  * 
- * Often when a slot is invoked in response to a signal, it would be useful
- * to be able to pass additional arguments to the slot.
- *
- * In Qt 5, especially with C++11, this is made much easier by the new signal-slot syntax:
- * http://qt-project.org/wiki/New_Signal_Slot_Syntax
+ * In Qt 5, this is supported natively using the new signal and slot syntax:
+ * http://qt-project.org/wiki/New_Signal_Slot_Syntax .  This is especially useful
+ * when combined with C++11's lambdas.
  *
  * QtCallbackProxy provides a way to simulate this under Qt 4 with C++03 by installing
  * a proxy object between the original sender of the signal and the receiver.  The proxy
  * receives the signal and then invokes the callback functor with the signal's arguments.
  *
- * Think of this as a more powerful version of QSignalMapper.
+ * Checking of signal and receiver argument types is done at runtime when setting up
+ * a connection, as with normal signals and slots in Qt 4.
+ *
+ * Example usage, binding a signal with no arguments to a callback which invokes
+ * a slot with one fixed argument:
  *
  *  MyObject receiver;
  *  QPushButton button;
@@ -53,6 +56,9 @@ class QtCallbackProxy : public QObject
 		 * @p sender emits @p signal.  If @p signal has default arguments,
 		 * they must be specified.  eg. Use SLOT(clicked(bool)) for a button
 		 * rather than SLOT(clicked()).
+		 *
+		 * The @p callback argument can be a QtCallback object or a function
+		 * object (eg. std::tr1::function).
 		 */
 		void bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 

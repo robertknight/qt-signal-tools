@@ -38,6 +38,7 @@ struct FunctionTraits<R(T1,T2,T3)> : FunctionTraits<R(T1,T2)>
 	typedef T3 arg2_type;
 };
 
+// interface for implementations of QtMetacallAdapter
 struct QtMetacallAdapterImplIface
 {
 	virtual ~QtMetacallAdapterImplIface() {}
@@ -212,6 +213,9 @@ public:
 	: m_impl(new QtCallbackImpl(callback))
 	{}
 
+	/** Construct a QtMetacallAdapter which invokes a function object
+	 * (eg. std::function or boost::function)
+	 */
 	template <template <class F> class FunctionObject, class F>
 	QtMetacallAdapter(const FunctionObject<F>& t)
 	: m_impl(new QtMetacallAdapterImpl<FunctionObject<F>,FunctionTraits<F>::count>(t))
@@ -227,11 +231,18 @@ public:
 		return *this;
 	}
 
+	/** Attempts to invoke the receiver with a given set of arguments from
+	 * a signal invocation.
+	 */
 	bool invoke(const QGenericArgument* args, int count) const
 	{
 		return m_impl->invoke(args, count);
 	}
 
+	/** Checks whether the receiver an be invoked with a given list of
+	 * argument types.  @p args are the argument types returned for
+	 * a given type by QMetaType::type()
+	 */
 	bool canInvoke(int* args, int count) const
 	{
 		return m_impl->canInvoke(args, count);
