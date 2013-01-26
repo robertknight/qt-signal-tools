@@ -136,91 +136,66 @@ struct QtMetacallAdapterImpl;
 // the Nth parameter type expected by the functor
 #define QMA_CHECK_ARG_TYPE(N) Base::template argMatch<typename Base::traits::arg##N##_type>(args[N])
 
-template <class Functor>
-struct QtMetacallAdapterImpl<Functor,0>
-  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,0> >
-{
-	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,0> > Base;
-	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
+// declares an implementation of QtMetacallAdapterImpl for functors
+// that take 'argCount' arguments.
+//
+// 'invokeExpr' is the expression passed to the functor to call it with
+// the appropriate args
+//
+// 'checkExpr' is the expression which verifies that the argument types
+// for a call match the receiver's types
+//
+// In C++11, this macro could be replaced with variadic templates
+#define QMA_DECLARE_ADAPTER_IMPL(argCount, invokeExpr, checkExpr) \
+  template <class Functor> \
+  struct QtMetacallAdapterImpl<Functor,argCount> \
+   : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,argCount> > \
+  { \
+    typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,argCount> > Base;\
+    QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {} \
+    virtual bool invoke(const QGenericArgument* args, int count) const { \
+	  (void)args;\
+	  if (count < argCount) {\
+	    return false; \
+	  }\
+	  Base::functor(invokeExpr);\
+	  return true;\
+	}\
+    virtual bool canInvoke(int* args,int count) const {\
+	  (void)args;\
+	  if (count < argCount) {\
+	    return false; \
+	  }\
+	  return checkExpr;\
+	}\
+  };
 
-	virtual bool invoke(const QGenericArgument*,int) const {
-		Base::functor();
-		return true;
-	}
+QMA_DECLARE_ADAPTER_IMPL(0,/* empty */, true /* can always invoke functor */)
 
-	virtual bool canInvoke(int*, int) const {
-		return true;
-	}
-};
+QMA_DECLARE_ADAPTER_IMPL(1,
+  QMA_CAST_ARG(0),
+  QMA_CHECK_ARG_TYPE(0)
+)
 
-template <class Functor>
-struct QtMetacallAdapterImpl<Functor,1>
-  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,1> >
-{
-	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,1> > Base;
-	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
+QMA_DECLARE_ADAPTER_IMPL(2,
+  (QMA_CAST_ARG(0), QMA_CAST_ARG(1)),
+  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1))
+)
 
-	virtual bool invoke(const QGenericArgument* args, int count) const {
-		if (count < 1) {
-			return false;
-		}
-		Base::functor(QMA_CAST_ARG(0));
-		return true;
-	}
+QMA_DECLARE_ADAPTER_IMPL(3,
+  (QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2)),
+  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2))
+)
+	
+QMA_DECLARE_ADAPTER_IMPL(4,
+  (QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2), QMA_CAST_ARG(3)),
+  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2) && QMA_CHECK_ARG_TYPE(3))
+)
 
-	virtual bool canInvoke(int* args, int count) const {
-		if (count < 1) {
-			return false;
-		}
-		return QMA_CHECK_ARG_TYPE(0);
-	}
-};
-
-template <class Functor>
-struct QtMetacallAdapterImpl<Functor,2> 
-  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,2> >
-{
-	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,2> > Base;
-	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
-
-	virtual bool invoke(const QGenericArgument* args, int count) const {
-		if (count < 2) {
-			return false;
-		}
-		Base::functor(QMA_CAST_ARG(0), QMA_CAST_ARG(1));
-		return true;
-	}
-
-	virtual bool canInvoke(int* args, int count) const {
-		if (count < 2) {
-			return false;
-		}
-		return QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1);
-	}
-};
-
-template <class Functor>
-struct QtMetacallAdapterImpl<Functor,3>
-  : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,3> >
-{
-	typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,3> > Base;
-	QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {}
-
-	virtual bool invoke(const QGenericArgument* args, int count) const {
-		if (count < 3) {
-			return false;
-		}
-		Base::functor(QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2));
-		return true;
-	}
-
-	virtual bool canInvoke(int* args, int count) const {
-		if (count < 3) {
-			return false;
-		}
-		return QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2);
-	}
-};
+QMA_DECLARE_ADAPTER_IMPL(5,
+  (QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2), QMA_CAST_ARG(3), QMA_CAST_ARG(4)),
+  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2) && QMA_CHECK_ARG_TYPE(3) && QMA_CHECK_ARG_TYPE(4))
+)
 
 /** A wrapper around either a QtCallback or a function object (such as std::function)
  * which can invoke the function given an array of QGenericArgument objects.
