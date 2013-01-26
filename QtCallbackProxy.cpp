@@ -187,15 +187,13 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 		if (methodId == 0) {
 			const Binding* binding = matchBinding(sender, signalIndex);
 			if (binding) {
-				QGenericArgument args[6] = {
-					QGenericArgument(binding->paramType(0), arguments[1]),
-					QGenericArgument(binding->paramType(1), arguments[2]),
-					QGenericArgument(binding->paramType(2), arguments[3]),
-					QGenericArgument(binding->paramType(3), arguments[4]),
-					QGenericArgument(binding->paramType(4), arguments[5]),
-					QGenericArgument(binding->paramType(5), arguments[6])
-				};
-				binding->callback.invoke(args, binding->paramTypes.count());
+				const int MAX_ARGS = 10;
+				int argCount = binding->paramTypes.count();
+				QGenericArgument args[MAX_ARGS];
+				for (int i=0; i < argCount; i++) {
+					args[i] = QGenericArgument(binding->paramType(0), arguments[i+1]);
+				}
+				binding->callback.invoke(args, argCount);
 			} else {
 				const char* signalName = sender->metaObject()->method(signalIndex).signature();
 				failInvoke(QString("Unable to find matching binding for signal %1").arg(signalName));
