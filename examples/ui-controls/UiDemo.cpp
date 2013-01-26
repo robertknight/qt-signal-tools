@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 	// create a callback object which sets the slider's value
 	// and use QtCallbackProxy to invoke it when the button is
 	// clicked
-	QtCallback1<int> button1Callback(slider, SLOT(setValue(int)));
+	QtCallback button1Callback(slider, SLOT(setValue(int)));
 	button1Callback.bind(10);
 	QtCallbackProxy::connectCallback(button1, SIGNAL(clicked(bool)), button1Callback);
 
