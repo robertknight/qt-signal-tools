@@ -5,8 +5,6 @@
 #include <QtCore/QMetaObject>
 #include <QtCore/QScopedPointer>
 
-#include <QtCore/QDebug>
-
 // extract the argument count and types
 // from a function signature
 template <class T>
