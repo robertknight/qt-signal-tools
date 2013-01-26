@@ -30,7 +30,8 @@ void MyWidget::someSlot(int firstArg, const QString& secondArg)
 
 QtCallbackProxy provides a way to invoke callbacks when an object emits a signal or receives
 a particular type of event.  The callbacks can be signals and slots
-(via `QtCallback`) or arbitrary functions using `tr1::function`.
+(via `QtCallback`) or arbitrary functions using `tr1::function`, `std::function`, `boost::function` or
+a similar wrapper.
 
 This provides a way to pass additional arguments than those provided by the signal to a slot
 when the signal is emitted.
