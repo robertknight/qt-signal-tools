@@ -7,6 +7,8 @@
 
 #include <QtCore/QDebug>
 
+// extract the argument count and types
+// from a function signature
 template <class T>
 struct FunctionTraits;
 
@@ -38,6 +40,8 @@ struct FunctionTraits<R(T1,T2,T3)> : FunctionTraits<R(T1,T2)>
 	typedef T3 arg2_type;
 };
 
+// extract the function signature from an input type T,
+// where T may be a function pointer or function object
 template <class T>
 struct ExtractSignature
 {
