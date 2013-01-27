@@ -135,4 +135,18 @@ void TestQtCallback::testArgTypeCheck()
 	QVERIFY(!QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), twoArgsFunc));
 }
 
+void fiveArgFunc(int,bool,float,char,double) {}
+
+void TestQtCallback::testArgLimit()
+{
+	QtMetacallAdapter adapter(fiveArgFunc);
+	QtMetacallArgsArray args = {-1};
+	int count = adapter.getArgTypes(args);
+	QStringList argList;
+	for (int i=0; i < count; i++) {
+		argList << QMetaType::typeName(args[i]);
+	}
+	QCOMPARE(argList, QStringList() << "int" << "bool" << "float" << "char" << "double");
+}
+
 QTEST_MAIN(TestQtCallback)

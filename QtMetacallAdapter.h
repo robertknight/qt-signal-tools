@@ -38,6 +38,20 @@ struct FunctionTraits<R(T1,T2,T3)> : FunctionTraits<R(T1,T2)>
 	typedef T3 arg2_type;
 };
 
+template <class R, class T1, class T2, class T3, class T4>
+struct FunctionTraits<R(T1,T2,T3,T4)> : FunctionTraits<R(T1,T2,T3)>
+{
+	enum { count = 4 };
+	typedef T4 arg3_type;
+};
+
+template <class R, class T1, class T2, class T3, class T4, class T5>
+struct FunctionTraits<R(T1,T2,T3,T4,T5)> : FunctionTraits<R(T1,T2,T3,T4)>
+{
+	enum { count = 5 };
+	typedef T5 arg4_type;
+};
+
 // extract the function signature from an input type T,
 // where T may be a function pointer or function object
 template <class T>
