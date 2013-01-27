@@ -58,13 +58,16 @@ struct ExtractSignature<Function<S> >
 	typedef S type;
 };
 
+static const int QTMETACALL_MAX_ARGS = 6;
+typedef int QtMetacallArgsArray[QTMETACALL_MAX_ARGS];
+
 // interface for implementations of QtMetacallAdapter
 struct QtMetacallAdapterImplIface
 {
 	virtual ~QtMetacallAdapterImplIface() {}
 	virtual bool invoke(const QGenericArgument* args, int count) const = 0;
 	virtual QtMetacallAdapterImplIface* clone() const = 0;
-	virtual bool canInvoke(int* args, int count) const = 0;
+	virtual int getArgTypes(QtMetacallArgsArray args) const  = 0;
 };
 
 struct QtCallbackImpl : public QtMetacallAdapterImplIface
@@ -92,17 +95,12 @@ struct QtCallbackImpl : public QtMetacallAdapterImplIface
 		return new QtCallbackImpl(callback);
 	}
 
-	virtual bool canInvoke(int* args, int count) const {
-		int unboundCount = callback.unboundParameterCount();
-		if (count < unboundCount) {
-			return false;
+	virtual int getArgTypes(QtMetacallArgsArray args) const {
+		int count = qMin(callback.unboundParameterCount(), QTMETACALL_MAX_ARGS);
+		for (int i=0; i < count; i++) {
+			args[i] = callback.unboundParameterType(i);
 		}
-		for (int i=0; i < unboundCount; i++) {
-			if (callback.unboundParameterType(i) != args[i]) {
-				return false;
-			}
-		}
-		return true;
+		return count;
 	}
 };
 
@@ -130,6 +128,21 @@ struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 	static bool argMatch(int argType) {
 		return qMetaTypeId<T>() == argType;
 	}
+
+	template <class T>
+	static int argType() {
+		return qMetaTypeId<T>();
+	}
+
+	static int fillArgTypes(QtMetacallArgsArray args, int count, ...) {
+		va_list list;
+		va_start(list, count);
+		for (int i=0; i < count; i++) {
+			args[i] = va_arg(list, int);
+		}
+		va_end(list);
+		return count;
+	}
 };
 
 template <class Functor, int ArgCount>
@@ -139,9 +152,8 @@ struct QtMetacallAdapterImpl;
 // to the type expected by the Nth functor parameter
 #define QMA_CAST_ARG(N) *reinterpret_cast<typename Base::traits::arg##N##_type*>(args[N].data())
 
-// check that the Nth argument type from a QGenericArgument array matches
-// the Nth parameter type expected by the functor
-#define QMA_CHECK_ARG_TYPE(N) Base::template argMatch<typename Base::traits::arg##N##_type>(args[N])
+// returns the type of the Nth argument that the receiver expects
+#define QMA_ARG_TYPE(N) Base::template argType<typename Base::traits::arg##N##_type>()
 
 // declares an implementation of QtMetacallAdapterImpl for functors
 // that take 'argCount' arguments.
@@ -149,11 +161,11 @@ struct QtMetacallAdapterImpl;
 // 'invokeExpr' is the expression passed to the functor to call it with
 // the appropriate args
 //
-// 'checkExpr' is the expression which verifies that the argument types
-// for a call match the receiver's types
+// 'argTypesExpr' is a comma-separated list of argument type IDs for
+// the arguments which the receiver expects.
 //
 // In C++11, this macro could be replaced with variadic templates
-#define QMA_DECLARE_ADAPTER_IMPL(argCount, invokeExpr, checkExpr) \
+#define QMA_DECLARE_ADAPTER_IMPL(argCount, invokeExpr, argTypesExpr) \
   template <class Functor> \
   struct QtMetacallAdapterImpl<Functor,argCount> \
    : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,argCount> > \
@@ -168,40 +180,39 @@ struct QtMetacallAdapterImpl;
 	  Base::functor(invokeExpr);\
 	  return true;\
 	}\
-    virtual bool canInvoke(int* args,int count) const {\
-	  (void)args;\
-	  if (count < argCount) {\
-	    return false; \
-	  }\
-	  return checkExpr;\
+	virtual int getArgTypes(QtMetacallArgsArray args) const {\
+		(void)args;\
+		return Base::fillArgTypes(args, argCount, argTypesExpr);\
 	}\
   };
 
-QMA_DECLARE_ADAPTER_IMPL(0,/* empty */, true /* can always invoke functor */)
+QMA_DECLARE_ADAPTER_IMPL(0,/* empty */, 0 /* empty */)
 
 QMA_DECLARE_ADAPTER_IMPL(1,
   QMA_CAST_ARG(0),
-  QMA_CHECK_ARG_TYPE(0)
+  QMA_ARG_TYPE(0)
 )
 
+#define QMA_COMMA ,
+
 QMA_DECLARE_ADAPTER_IMPL(2,
-  (QMA_CAST_ARG(0), QMA_CAST_ARG(1)),
-  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1))
+  QMA_CAST_ARG(0) QMA_COMMA QMA_CAST_ARG(1),
+  QMA_ARG_TYPE(0) QMA_COMMA QMA_ARG_TYPE(1)
 )
 
 QMA_DECLARE_ADAPTER_IMPL(3,
-  (QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2)),
-  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2))
+  QMA_CAST_ARG(0) QMA_COMMA QMA_CAST_ARG(1) QMA_COMMA QMA_CAST_ARG(2),
+  QMA_ARG_TYPE(0) QMA_COMMA QMA_ARG_TYPE(1) QMA_COMMA QMA_ARG_TYPE(2)
 )
 	
 QMA_DECLARE_ADAPTER_IMPL(4,
-  (QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2), QMA_CAST_ARG(3)),
-  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2) && QMA_CHECK_ARG_TYPE(3))
+  QMA_CAST_ARG(0) QMA_COMMA QMA_CAST_ARG(1) QMA_COMMA QMA_CAST_ARG(2) QMA_COMMA QMA_CAST_ARG(3),
+  QMA_ARG_TYPE(0) QMA_COMMA QMA_ARG_TYPE(1) QMA_COMMA QMA_ARG_TYPE(2) QMA_COMMA QMA_ARG_TYPE(3)
 )
 
 QMA_DECLARE_ADAPTER_IMPL(5,
-  (QMA_CAST_ARG(0), QMA_CAST_ARG(1), QMA_CAST_ARG(2), QMA_CAST_ARG(3), QMA_CAST_ARG(4)),
-  (QMA_CHECK_ARG_TYPE(0) && QMA_CHECK_ARG_TYPE(1) && QMA_CHECK_ARG_TYPE(2) && QMA_CHECK_ARG_TYPE(3) && QMA_CHECK_ARG_TYPE(4))
+  QMA_CAST_ARG(0) QMA_COMMA QMA_CAST_ARG(1) QMA_COMMA QMA_CAST_ARG(2) QMA_COMMA QMA_CAST_ARG(3) QMA_COMMA QMA_CAST_ARG(4),
+  QMA_ARG_TYPE(0) QMA_COMMA QMA_ARG_TYPE(1) QMA_COMMA QMA_ARG_TYPE(2) QMA_COMMA QMA_ARG_TYPE(3) QMA_COMMA QMA_ARG_TYPE(4)
 )
 
 /** A wrapper around either a QtCallback or a function object (such as std::function)
@@ -251,13 +262,10 @@ public:
 		return m_impl->invoke(args, count);
 	}
 
-	/** Checks whether the receiver an be invoked with a given list of
-	 * argument types.  @p args are the argument types returned for
-	 * a given type by QMetaType::type()
-	 */
-	bool canInvoke(int* args, int count) const
+	/** Retrieves the count and types of arguments expected by the receiver */
+	int getArgTypes(QtMetacallArgsArray args) const
 	{
-		return m_impl->canInvoke(args, count);
+		return m_impl->getArgTypes(args);
 	}
 	
 private:

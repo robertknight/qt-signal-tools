@@ -60,12 +60,12 @@ class QtCallbackProxy : public QObject
 		 * The @p callback argument can be a QtCallback object or a function
 		 * object (eg. std::tr1::function).
 		 */
-		void bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
+		bool bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 
 		/** Set up a binding so that @p callback is invoked when @p sender
 		 * receives @p event.
 		 */
-		void bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
+		bool bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
 
 		void unbind(QObject* sender, const char* signal);
 
@@ -77,13 +77,13 @@ class QtCallbackProxy : public QObject
 
 		/** Install a proxy which invokes @p callback when @p sender emits @p signal.
 		 */
-		static void connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
+		static bool connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 
 		static void disconnectCallbacks(QObject* sender, const char* signal);
 
 		/** Install a proxy which invokes @p callback when @p sender receives @p event.
 		 */
-		static void connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
+		static bool connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
 		static void disconnectEvent(QObject* sender, QEvent::Type event);
 
 		// re-implemented from QObject

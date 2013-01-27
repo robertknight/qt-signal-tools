@@ -16,19 +16,33 @@ QtCallbackProxy::QtCallbackProxy(QObject* parent)
 
 bool QtCallbackProxy::checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes)
 {
-	int argTypes[10] = {0};
-	for (int i=0; i < paramTypes.count(); i++) {
-		argTypes[i] = QMetaType::type(paramTypes.at(i).data());
+	int receiverArgTypes[QTMETACALL_MAX_ARGS] = {-1};
+	int receiverArgCount = callback.getArgTypes(receiverArgTypes);
+
+	for (int i=0; i < receiverArgCount; i++) {
+		if (i >= paramTypes.count()) {
+			qWarning() << "Missing argument" << i << ": "
+			  << "Receiver expects" << QLatin1String(QMetaType::typeName(receiverArgTypes[i]));
+			return false;
+		}
+		int type = QMetaType::type(paramTypes.at(i).data());
+		if (type != receiverArgTypes[i]) {
+			qWarning() << "Type mismatch for argument" << i << ": "
+			  << "Signal sends" << QLatin1String(QMetaType::typeName(type))
+			  << "receiver expects" << QLatin1String(QMetaType::typeName(receiverArgTypes[i]));
+			return false;
+		}
 	}
-	return callback.canInvoke(argTypes, paramTypes.count());
+
+	return true;
 }
 
-void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
+bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
 	if (signalIndex < 0) {
 		qWarning() << "No such signal" << signal << "for" << sender;
-		return;
+		return false;
 	}
 
 	Binding binding(sender, signalIndex, callback);
@@ -36,30 +50,33 @@ void QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 
 	if (!checkTypeMatch(callback, binding.paramTypes)) {
 		qWarning() << "Sender and receiver types do not match for" << signal+1;
-		return;
+		return false;
 	}
 
 	int memberOffset = QObject::staticMetaObject.methodCount();
 
 	if (!QMetaObject::connect(sender, signalIndex, this, memberOffset, Qt::AutoConnection, 0)) {
 		qWarning() << "Unable to connect signal" << signal << "for" << sender;
-		return;
+		return false;
 	}
 
 	m_bindings << binding;
+	return true;
 }
 
-void QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
+bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
-	if (!callback.canInvoke(0,0)) {
+	if (!checkTypeMatch(callback, QList<QByteArray>())) {
 		qWarning() << "Callback does not take 0 arguments";
-		return;
+		return false;
 	}
 
 	sender->installEventFilter(this);
 
 	EventBinding binding(sender, event, callback, filter);
 	m_eventBindings << binding;
+
+	return true;
 }
 
 void QtCallbackProxy::unbind(QObject* sender, const char* signal)
@@ -127,10 +144,10 @@ QtCallbackProxy* installCallbackProxy(QObject* sender)
 	return callbackProxy;
 }
 
-void QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
+bool QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	QtCallbackProxy* proxy = installCallbackProxy(sender);
-	proxy->bind(sender, signal, callback);
+	return proxy->bind(sender, signal, callback);
 }
 
 void QtCallbackProxy::disconnectCallbacks(QObject* sender, const char* signal)
@@ -139,10 +156,10 @@ void QtCallbackProxy::disconnectCallbacks(QObject* sender, const char* signal)
 	proxy->unbind(sender, signal);
 }
 
-void QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
+bool QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
 	QtCallbackProxy* proxy = installCallbackProxy(sender);
-	proxy->bind(sender, event, callback, filter);
+	return proxy->bind(sender, event, callback, filter);
 }
 
 void QtCallbackProxy::disconnectEvent(QObject* sender, QEvent::Type event)

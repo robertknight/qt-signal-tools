@@ -121,4 +121,18 @@ void TestQtCallback::testArgCast()
 	QCOMPARE(list, QList<qint64>() << 42LL);
 }
 
+void floatFunc(float) {}
+void intFunc(int) {}
+void noArgsFunc() {}
+void twoArgsFunc(int,int) {}
+
+void TestQtCallback::testArgTypeCheck()
+{
+	CallbackTester tester;
+	QVERIFY(QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), intFunc));
+	QVERIFY(!QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), floatFunc));
+	QVERIFY(QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), noArgsFunc));
+	QVERIFY(!QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), twoArgsFunc));
+}
+
 QTEST_MAIN(TestQtCallback)

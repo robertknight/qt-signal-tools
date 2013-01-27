@@ -14,6 +14,7 @@ class TestQtCallback : public QObject
 		void testSignalToFunctionObject();
 		void testSignalToPlainFunc();
 		void testArgCast();
+		void testArgTypeCheck();
 };
 
 class CallbackTester : public QObject
