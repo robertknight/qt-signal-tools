@@ -152,7 +152,7 @@ void TestQtCallback::testArgLimit()
 
 void TestQtCallback::testSignalToLambda()
 {
-#ifdef COMPILER_SUPPORTS_LAMBDAS
+#ifdef QST_COMPILER_SUPPORTS_LAMBDAS
 	CallbackTester tester;
 	int sum = 0;
 	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), function<void(int)>(
