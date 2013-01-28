@@ -46,14 +46,34 @@ a way to pass additional arguments to the receiver other than those from the sig
 or `std::tr1::bind()`.
 
 Usage:
+
+Connecting a signal to a slot with pre-bound arguments:
 ```cpp
 MyObject receiver;
 QPushButton button;
-QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)), callback,
+QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)),
   QtCallback(&receiver, SLOT(buttonClicked(int))).bind(42));
 
 // invokes MyObject::buttonClicked() slot with arguments (42)
 button.click();
+```
+
+Connecting a signal to an arbitrary function:
+```cpp
+using namespace std::tr1;
+using namespace std::tr1::placeholders;
+
+SomeObject receiver;
+QLineEdit editor;
+
+// function which calls someMethod() with the first-argument fixed (42) and the
+// second string argument from the signal
+function<void(int,QString)> callback(bind(&SomeObject::someMethod, &receiver, 42, _1));
+
+QtCallbackProxy::connectCallback(&editor, SIGNAL(textChanged(QString)), callback);
+  
+// invokes SomeObject::someMethod(42, "Hello World")
+editor.setText("Hello World");
 ```
 
 ## License
