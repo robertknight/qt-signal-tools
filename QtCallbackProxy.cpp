@@ -1,6 +1,7 @@
 #include "QtCallbackProxy.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QTimer>
 
 // method index of QObject::destroyed(QObject*) signal
 const int DESTROYED_SIGNAL_INDEX = 0;
@@ -270,6 +271,16 @@ int QtCallbackProxy::bindingCount() const
 bool QtCallbackProxy::isConnected(QObject* sender) const
 {
 	return m_bindings.contains(sender) || m_eventBindings.contains(sender);
+}
+
+void QtCallbackProxy::delayedCall(int ms, const QtMetacallAdapter& adapter)
+{
+	QTimer* timer = new QTimer;
+	timer->setSingleShot(true);
+	timer->setInterval(ms);
+	QtCallbackProxy::connectCallback(timer, SIGNAL(timeout()), adapter);
+	connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
+	timer->start();
 }
 
 

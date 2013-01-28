@@ -20,6 +20,7 @@ class TestQtCallback : public QObject
 		void testSignalToLambda();
 		void testSenderDestroyed();
 		void testUnbind();
+		void testDelayedCall();
 
 		void testConnectPerf();
 };
@@ -51,9 +52,11 @@ class CallbackTester : public QObject
 		void addValue(int value)
 		{
 			values << value;
+			emit valuesChanged();
 		}
 
 	Q_SIGNALS:
 		void aSignal(int arg);
 		void noArgSignal();
+		void valuesChanged();
 };

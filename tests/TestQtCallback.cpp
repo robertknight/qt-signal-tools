@@ -2,6 +2,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QEventLoop>
 
 #include <iostream>
 
@@ -242,6 +243,24 @@ void TestQtCallback::testConnectPerf()
 
 		objCount *= 2;
 	}
+}
+
+void TestQtCallback::testDelayedCall()
+{
+	CallbackTester tester;
+	QEventLoop loop;
+
+	connect(&tester, SIGNAL(valuesChanged()), &loop, SLOT(quit()));
+	
+	const int MIN_DELAY = 25;
+
+	QElapsedTimer timer;
+	timer.start();
+	QtCallbackProxy::delayedCall(MIN_DELAY, function<void()>(bind(&CallbackTester::addValue, &tester, 42)));
+	loop.exec();
+
+	QVERIFY(timer.elapsed() >= MIN_DELAY);
+	QCOMPARE(tester.values, QList<int>() << 42);
 }
 
 QTEST_MAIN(TestQtCallback)
