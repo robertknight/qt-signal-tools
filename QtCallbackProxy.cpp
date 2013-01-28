@@ -150,11 +150,9 @@ QtCallbackProxy* installCallbackProxy(QObject* sender)
 {
 	// We currently create one proxy object per sender.
 	//
-	// On the one hand, this makes signal/event dispatches cheaper
-	// because we only have to match on signals/events for that sender
-	// in eventFilter() and qt_metacall().  Within QObject's internals,
-	// there are also some operations that are linear in the number of
-	// signal/slot connections.
+	// The upside is that some operations are cheaper as within QObject's
+	// internals, there are methods which are linear in the number of connected
+	// senders (eg. sender(), senderSignalIndex())
 	//
 	// The downside of having more proxy objects is the cost per instance
 	// and the time required to instantiate a proxy object the first time
@@ -214,6 +212,8 @@ void QtCallbackProxy::failInvoke(const QString& error)
 
 int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** arguments)
 {
+	// performance note - QObject::sender() and senderSignalIndex()
+	// are linear in the number of connections to this object
 	QObject* sender = this->sender();
 	int signalIndex = this->senderSignalIndex();
 

@@ -1,6 +1,7 @@
 #include "TestQtCallback.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QElapsedTimer>
 
 #include <iostream>
 
@@ -177,6 +178,36 @@ void TestQtCallback::testSenderDestroyed()
 	QCOMPARE(proxy.bindingCount(), 1);
 	tester.reset();
 	QCOMPARE(proxy.bindingCount(), 0);
+}
+
+void TestQtCallback::testConnectPerf()
+{
+	QSKIP("Benchmark disabled", SkipAll);
+
+	CallbackTester receiver;
+
+	int objCount = 2;
+
+	for (int i = 0; i < 15; i++) {
+		QElapsedTimer timer;
+		timer.start();
+
+		QVector<CallbackTester*> objectList;
+		for (int k=0; k < objCount; k++) {
+			objectList << new CallbackTester;
+			QtCallbackProxy::connectCallback(objectList.last(), SIGNAL(aSignal(int)),
+					function<void(int)>(bind(&CallbackTester::addValue, &receiver, 42)));
+			objectList.last()->emitASignal(32);
+		}
+		qDeleteAll(objectList);
+		objectList.clear();
+
+		qreal totalMs = timer.nsecsElapsed() / (1000 * 1000);
+		qreal meanMs = totalMs/objCount;
+		qDebug() << "cost per obj for" << objCount << "objects" << meanMs << "total" << totalMs;
+
+		objCount *= 2;
+	}
 }
 
 QTEST_MAIN(TestQtCallback)

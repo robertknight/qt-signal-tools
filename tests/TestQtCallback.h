@@ -19,6 +19,8 @@ class TestQtCallback : public QObject
 		void testArgLimit();
 		void testSignalToLambda();
 		void testSenderDestroyed();
+
+		void testConnectPerf();
 };
 
 class CallbackTester : public QObject
