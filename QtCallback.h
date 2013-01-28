@@ -7,6 +7,7 @@
 #include <QtCore/QSharedDataPointer>
 #include <QtCore/QVarLengthArray>
 #include <QtCore/QVariant>
+#include <QtCore/QWeakPointer>
 
 class QtCallbackBase
 {
@@ -41,7 +42,14 @@ class QtCallbackBase
 				int position;
 				QVariant value;
 			};
+
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 			QPointer<QObject> receiver;
+#else
+			// QWeakPointer is much more efficient under Qt 4
+			// when large numbers of weak pointers exist
+			QWeakPointer<QObject> receiver;
+#endif
 			QMetaMethod method;
 			QVarLengthArray<Arg,5> args;
 		};
