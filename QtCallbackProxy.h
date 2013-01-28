@@ -149,6 +149,8 @@ class QtCallbackProxy : public QObject
 		void setupDestroyNotify(QObject* sender);
 
 		static bool checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes);
+		static QtCallbackProxy* installProxy(QObject* sender);
+		static void removeProxy(QObject* sender);
 
 		QHash<QObject*,Binding> m_bindings;
 		QHash<QObject*,EventBinding> m_eventBindings;
