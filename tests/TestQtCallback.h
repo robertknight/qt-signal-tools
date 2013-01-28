@@ -17,10 +17,7 @@ class TestQtCallback : public QObject
 		void testArgCast();
 		void testArgTypeCheck();
 		void testArgLimit();
-
-#ifdef COMPILER_SUPPORTS_LAMBDAS
 		void testSignalToLambda();
-#endif
 };
 
 class CallbackTester : public QObject

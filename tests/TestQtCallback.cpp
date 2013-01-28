@@ -2,12 +2,6 @@
 
 #include <QtCore/QDebug>
 
-#ifdef Q_CC_MSVC
-#include <functional>
-#else
-#include <tr1/functional>
-#endif
-
 #include <iostream>
 
 using namespace std::tr1;
@@ -154,9 +148,9 @@ void TestQtCallback::testArgLimit()
 	QCOMPARE(argList, QStringList() << "int" << "bool" << "float" << "char" << "double");
 }
 
-#ifdef COMPILER_SUPPORTS_LAMBDAS
 void TestQtCallback::testSignalToLambda()
 {
+#ifdef COMPILER_SUPPORTS_LAMBDAS
     CallbackTester tester;
     int sum = 0;
     QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), function<void(int)>(
@@ -165,7 +159,7 @@ void TestQtCallback::testSignalToLambda()
     tester.emitASignal(12);
     tester.emitASignal(7);
     QCOMPARE(sum, 19);
-}
 #endif
+}
 
 QTEST_MAIN(TestQtCallback)

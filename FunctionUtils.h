@@ -8,6 +8,22 @@
 #endif
 
 // tests for relevant C++11 features
+
+// Visual C++
 #if (_MSC_VER >= 1600)
 #define COMPILER_SUPPORTS_LAMBDAS
 #endif
+
+// GCC
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 5) && defined(__GXX_EXPERIMENTAL_CXX0X__)
+#define COMPILER_SUPPORTS_LAMBDAS
+#endif
+
+// Clang
+#if __clang__
+#if __has_feature(cxx_lambdas)
+#define COMPILER_SUPPORTS_LAMBDAS
+#endif
+#endif
+
+
