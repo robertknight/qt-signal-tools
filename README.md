@@ -76,6 +76,12 @@ QtCallbackProxy::connectCallback(&editor, SIGNAL(textChanged(QString)), callback
 editor.setText("Hello World");
 ```
 
+### QtMetacallAdapter
+
+QtMetacallAdapter is a low-level wrapper around a function or function object (eg. `std::function`)
+which can be used to invoke the function with a list of QGenericArgument (created by the Q_ARG() macro)
+and introspect the function's argument types at runtime.
+
 ## License
 
 qt-signal-tools is licensed under the BSD license.
