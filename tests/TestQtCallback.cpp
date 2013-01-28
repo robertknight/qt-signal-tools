@@ -2,11 +2,16 @@
 
 #include <QtCore/QDebug>
 
+#ifdef Q_CC_MSVC
+#include <functional>
+#else
 #include <tr1/functional>
+#endif
+
 #include <iostream>
 
-using namespace std;
 using namespace std::tr1;
+using namespace std::tr1::placeholders;
 
 void TestQtCallback::testInvoke()
 {
@@ -80,7 +85,7 @@ void TestQtCallback::testSignalToFunctionObject()
 	tester.values.clear();
 
 	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
-	  function<void(int)>(bind(&CallbackTester::addValue, &tester, placeholders::_1)));
+	  function<void(int)>(bind(&CallbackTester::addValue, &tester, _1)));
 	tester.emitASignal(39);
 	QCOMPARE(tester.values, QList<int>() << 39);
 
@@ -88,7 +93,7 @@ void TestQtCallback::testSignalToFunctionObject()
 	// is caught
 	tester.values.clear();
 	QtCallbackProxy::connectCallback(&tester, SIGNAL(noArgSignal()),
-	  function<void(int)>(bind(&CallbackTester::addValue, &tester, placeholders::_1)));
+	  function<void(int)>(bind(&CallbackTester::addValue, &tester, _1)));
 	tester.emitNoArgSignal();
 	QCOMPARE(tester.values, QList<int>());
 }
