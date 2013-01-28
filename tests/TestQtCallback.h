@@ -2,6 +2,7 @@
 
 #include "QtCallback.h"
 #include "QtCallbackProxy.h"
+#include "FunctionUtils.h"
 
 class TestQtCallback : public QObject
 {
@@ -16,6 +17,10 @@ class TestQtCallback : public QObject
 		void testArgCast();
 		void testArgTypeCheck();
 		void testArgLimit();
+
+#ifdef COMPILER_SUPPORTS_LAMBDAS
+		void testSignalToLambda();
+#endif
 };
 
 class CallbackTester : public QObject
