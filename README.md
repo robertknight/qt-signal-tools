@@ -1,6 +1,8 @@
 # Qt Signal Tools
 
-qt-signal-tools is a collection of utility classes related to signal and slots in Qt.
+qt-signal-tools is a collection of utility classes related to signal and slots in Qt.  It includes:
+ * QtCallback - Package up a receiver and slot arguments into an object for invoking later.
+ * QtCallbackProxy - Connect signals and events from objects to QtCallback or arbitrary functions.
 
 ## Requirements
 
@@ -86,6 +88,8 @@ and introspect the function's argument types at runtime.
 
 qt-signal-tools is licensed under the BSD license.
 
-## Related Projects
+## Related Projects & Reading
 
 Qt Signal Adapters - Library for connecting signals to Boost function objects: http://sourceforge.net/projects/qtsignaladapter/
+sigfwd - Library for connecting signals to function objects.  Uses Boost. https://bitbucket.org/edd/sigfwd/wiki/Home
+Qt 5 meta-object system changes - http://blog.qt.digia.com/blog/2012/06/22/changes-to-the-meta-object-system-in-qt-5/
