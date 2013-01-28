@@ -6,6 +6,11 @@
 // method index of QObject::destroyed(QObject*) signal
 const int DESTROYED_SIGNAL_INDEX = 0;
 
+static int targetMethodIndex()
+{
+	return QObject::staticMetaObject.methodCount();
+}
+
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
 	const QMetaObject* metaObject = object->metaObject();
@@ -51,7 +56,7 @@ void QtCallbackProxy::setupDestroyNotify(QObject* sender)
 	    !m_eventBindings.contains(sender))
 	{
 		QMetaObject::connect(sender, DESTROYED_SIGNAL_INDEX,
-		  this, QObject::staticMetaObject.methodCount(), Qt::AutoConnection, 0);
+		  this, targetMethodIndex(), Qt::AutoConnection, 0);
 	}
 }
 
@@ -71,9 +76,7 @@ bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 		return false;
 	}
 
-	int memberOffset = QObject::staticMetaObject.methodCount();
-
-	if (!QMetaObject::connect(sender, signalIndex, this, memberOffset, Qt::AutoConnection, 0)) {
+	if (!QMetaObject::connect(sender, signalIndex, this, targetMethodIndex(), Qt::AutoConnection, 0)) {
 		qWarning() << "Unable to connect signal" << signal << "for" << sender;
 		return false;
 	}
@@ -105,8 +108,7 @@ void QtCallbackProxy::unbind(QObject* sender, const char* signal)
 	QHash<QObject*,Binding>::iterator iter = m_bindings.find(sender);
 	while (iter != m_bindings.end() && iter.key() == sender) {
 		if (iter->signalIndex == signalIndex) {
-			int memberOffset = QObject::staticMetaObject.methodCount();
-			QMetaObject::disconnect(sender, signalIndex, this, memberOffset);
+			QMetaObject::disconnect(sender, signalIndex, this, targetMethodIndex());
 			iter = m_bindings.erase(iter);
 		} else {
 			++iter;
