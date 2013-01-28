@@ -2,8 +2,8 @@
 
 #include "QtCallback.h"
 
+#include <QtCore/QSharedData>
 #include <QtCore/QMetaObject>
-#include <QtCore/QScopedPointer>
 
 // extract the argument count and types
 // from a function signature
@@ -76,11 +76,10 @@ static const int QTMETACALL_MAX_ARGS = 6;
 typedef int QtMetacallArgsArray[QTMETACALL_MAX_ARGS];
 
 // interface for implementations of QtMetacallAdapter
-struct QtMetacallAdapterImplIface
+struct QtMetacallAdapterImplIface : public QSharedData
 {
 	virtual ~QtMetacallAdapterImplIface() {}
 	virtual bool invoke(const QGenericArgument* args, int count) const = 0;
-	virtual QtMetacallAdapterImplIface* clone() const = 0;
 	virtual int getArgTypes(QtMetacallArgsArray args) const  = 0;
 };
 
@@ -105,10 +104,6 @@ struct QtCallbackImpl : public QtMetacallAdapterImplIface
 		return callback.invokeWithArgs(args[0], args[1], args[2], args[3], args[4], args[5]);
 	}
 
-	virtual QtMetacallAdapterImplIface* clone() const {
-		return new QtCallbackImpl(callback);
-	}
-
 	virtual int getArgTypes(QtMetacallArgsArray args) const {
 		int count = qMin(callback.unboundParameterCount(), QTMETACALL_MAX_ARGS);
 		for (int i=0; i < count; i++) {
@@ -118,7 +113,7 @@ struct QtCallbackImpl : public QtMetacallAdapterImplIface
 	}
 };
 
-template <class Functor, class Derived>
+template <class Functor>
 struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 {
 	// 'traits' type provides access to the number and types of
@@ -131,10 +126,6 @@ struct QtMetacallAdapterImplBase : QtMetacallAdapterImplIface
 	QtMetacallAdapterImplBase(const Functor& _f)
 	: functor(_f)
 	{}
-
-	virtual QtMetacallAdapterImplIface* clone() const {
-		return new Derived(functor);
-	}
 
 	// helper for checking at runtime that the type of a signal
 	// argument matches the type of the receiver's corresponding argument
@@ -182,9 +173,9 @@ struct QtMetacallAdapterImpl;
 #define QMA_DECLARE_ADAPTER_IMPL(argCount, invokeExpr, argTypesExpr) \
   template <class Functor> \
   struct QtMetacallAdapterImpl<Functor,argCount> \
-   : QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,argCount> > \
+   : QtMetacallAdapterImplBase<Functor> \
   { \
-    typedef QtMetacallAdapterImplBase<Functor,QtMetacallAdapterImpl<Functor,argCount> > Base;\
+    typedef QtMetacallAdapterImplBase<Functor> Base;\
     QtMetacallAdapterImpl(const Functor& functor) : Base(functor) {} \
     virtual bool invoke(const QGenericArgument* args, int count) const { \
 	  (void)args;\
@@ -259,14 +250,8 @@ public:
 	}
 
 	QtMetacallAdapter(const QtMetacallAdapter& other)
-	: m_impl(other.m_impl->clone())
+	: m_impl(other.m_impl)
 	{}
-
-	QtMetacallAdapter& operator=(const QtMetacallAdapter& other)
-	{
-		m_impl.reset(other.m_impl->clone());
-		return *this;
-	}
 
 	/** Attempts to invoke the receiver with a given set of arguments from
 	 * a signal invocation.
@@ -283,6 +268,6 @@ public:
 	}
 	
 private:
-	QScopedPointer<QtMetacallAdapterImplIface> m_impl;
+	QSharedDataPointer<QtMetacallAdapterImplIface> m_impl;
 };
 
