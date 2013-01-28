@@ -2,6 +2,9 @@
 
 #include <QtCore/QDebug>
 
+// method index of QObject::destroyed(QObject*) signal
+const int DESTROYED_SIGNAL_INDEX = 0;
+
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
 	const QMetaObject* metaObject = object->metaObject();
@@ -41,6 +44,16 @@ bool QtCallbackProxy::checkTypeMatch(const QtMetacallAdapter& callback, const QL
 	return true;
 }
 
+void QtCallbackProxy::setupDestroyNotify(QObject* sender)
+{
+	if (!m_bindings.contains(sender) &&
+	    !m_eventBindings.contains(sender))
+	{
+		QMetaObject::connect(sender, DESTROYED_SIGNAL_INDEX,
+		  this, QObject::staticMetaObject.methodCount(), Qt::AutoConnection, 0);
+	}
+}
+
 bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
@@ -64,6 +77,7 @@ bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 		return false;
 	}
 
+	setupDestroyNotify(sender);
 	m_bindings.insert(sender, binding);
 	return true;
 }
@@ -75,6 +89,7 @@ bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacall
 		return false;
 	}
 
+	setupDestroyNotify(sender);
 	sender->installEventFilter(this);
 
 	EventBinding binding(sender, event, callback, filter);
@@ -125,6 +140,12 @@ void QtCallbackProxy::unbind(QObject* sender, QEvent::Type event)
 	}
 }
 
+void QtCallbackProxy::unbind(QObject* sender)
+{
+	m_bindings.remove(sender);
+	m_eventBindings.remove(sender);
+}
+
 QtCallbackProxy* installCallbackProxy(QObject* sender)
 {
 	// We currently create one proxy object per sender.
@@ -145,7 +166,7 @@ QtCallbackProxy* installCallbackProxy(QObject* sender)
 	if (!callbackProxy) {
 		callbackProxy = new QtCallbackProxy(proxyTarget);
 		proxyTarget->setProperty(callbackProperty, QVariant::fromValue(callbackProxy));
-	}
+	}	
 
 	return callbackProxy;
 }
@@ -200,7 +221,7 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 		failInvoke("Unable to determine sender");
 	} else if (signalIndex < 0) {
 		failInvoke("Unable to determine sender signal");
-	}
+	}	
 
 	methodId = QObject::qt_metacall(call, methodId, arguments);
 	if (methodId < 0) {
@@ -218,13 +239,18 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 					args[i] = QGenericArgument(binding->paramType(0), arguments[i+1]);
 				}
 				binding->callback.invoke(args, argCount);
-			} else {
+			} else if (signalIndex != DESTROYED_SIGNAL_INDEX) {
 				const char* signalName = sender->metaObject()->method(signalIndex).signature();
 				failInvoke(QString("Unable to find matching binding for signal %1").arg(signalName));
 			}
 		}
 		--methodId;
 	}
+
+	if (signalIndex == DESTROYED_SIGNAL_INDEX) {
+		unbind(sender);
+	}
+
 	return methodId;
 }
 
@@ -238,5 +264,10 @@ bool QtCallbackProxy::eventFilter(QObject* watched, QEvent* event)
 		}
 	}
 	return QObject::eventFilter(watched, event);
+}
+
+int QtCallbackProxy::bindingCount() const
+{
+	return m_bindings.count() + m_eventBindings.count();
 }
 

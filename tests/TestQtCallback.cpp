@@ -162,4 +162,21 @@ void TestQtCallback::testSignalToLambda()
 #endif
 }
 
+void TestQtCallback::testSenderDestroyed()
+{
+	QScopedPointer<CallbackTester> tester(new CallbackTester);
+	QtCallbackProxy proxy;
+	proxy.bind(tester.data(), SIGNAL(aSignal(int)),
+	  noArgsFunc);
+	QCOMPARE(proxy.bindingCount(), 1);
+	tester.reset();
+	QCOMPARE(proxy.bindingCount(), 0);
+
+	tester.reset(new CallbackTester);
+	proxy.bind(tester.data(), QEvent::MouseButtonPress, noArgsFunc);
+	QCOMPARE(proxy.bindingCount(), 1);
+	tester.reset();
+	QCOMPARE(proxy.bindingCount(), 0);
+}
+
 QTEST_MAIN(TestQtCallback)
