@@ -101,42 +101,35 @@ bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacall
 void QtCallbackProxy::unbind(QObject* sender, const char* signal)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
-	QMutableHashIterator<QObject*,Binding> iter(m_bindings);
-	while (iter.hasNext())
-	{
-		iter.next();
-		const Binding& binding = iter.value();
-		if (binding.sender == sender &&
-		    binding.signalIndex == signalIndex)
-		{
+	QHash<QObject*,Binding>::iterator iter = m_bindings.find(sender);
+	while (iter != m_bindings.end() && iter.key() == sender) {
+		if (iter->signalIndex == signalIndex) {
 			int memberOffset = QObject::staticMetaObject.methodCount();
 			QMetaObject::disconnect(sender, signalIndex, this, memberOffset);
-			iter.remove();
+			iter = m_bindings.erase(iter);
+		} else {
+			++iter;
 		}
+	}
+	if (!isConnected(sender)) {
+		// disconnect destruction notifications
+		unbind(sender);
 	}
 }
 
 void QtCallbackProxy::unbind(QObject* sender, QEvent::Type event)
 {
-	int activeBindingCount = 0;
-	QMutableHashIterator<QObject*,EventBinding> iter(m_eventBindings);
-	while (iter.hasNext())
-	{
-		iter.next();
-		const EventBinding& binding = iter.value();
-		if (binding.sender == sender)
-		{
-			++activeBindingCount;
-			if (binding.eventType == event)
-			{
-				--activeBindingCount;
-				iter.remove();
-			}
+	QHash<QObject*,EventBinding>::iterator iter = m_eventBindings.find(sender);
+	while (iter != m_eventBindings.end() && iter.key() == sender) {
+		if (iter->eventType == event) {
+			iter = m_eventBindings.erase(iter);
+		} else {
+			++iter;
 		}
 	}
-	if (activeBindingCount == 0)
-	{
-		sender->removeEventFilter(this);
+	if (!isConnected(sender)) {
+		// disconnect destruction notifications
+		unbind(sender);
 	}
 }
 
@@ -144,6 +137,9 @@ void QtCallbackProxy::unbind(QObject* sender)
 {
 	m_bindings.remove(sender);
 	m_eventBindings.remove(sender);
+
+	sender->removeEventFilter(this);
+	disconnect(sender, 0, this, 0);
 }
 
 QtCallbackProxy* installCallbackProxy(QObject* sender)
@@ -270,4 +266,10 @@ int QtCallbackProxy::bindingCount() const
 {
 	return m_bindings.count() + m_eventBindings.count();
 }
+
+bool QtCallbackProxy::isConnected(QObject* sender) const
+{
+	return m_bindings.contains(sender) || m_eventBindings.contains(sender);
+}
+
 

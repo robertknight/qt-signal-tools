@@ -19,6 +19,7 @@ class TestQtCallback : public QObject
 		void testArgLimit();
 		void testSignalToLambda();
 		void testSenderDestroyed();
+		void testUnbind();
 
 		void testConnectPerf();
 };
@@ -38,6 +39,12 @@ class CallbackTester : public QObject
 		void emitNoArgSignal()
 		{
 			emit noArgSignal();
+		}
+
+		// expose protected QObject::receivers() method
+		int receiverCount(const char* signal) const
+		{
+			return receivers(signal);
 		}
 
 	public Q_SLOTS:

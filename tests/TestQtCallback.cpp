@@ -182,6 +182,38 @@ void TestQtCallback::testSenderDestroyed()
 	QCOMPARE(proxy.bindingCount(), 0);
 }
 
+void TestQtCallback::testUnbind()
+{
+	CallbackTester tester;
+	QtCallbackProxy proxy;
+	
+	proxy.bind(&tester, SIGNAL(aSignal(int)), noArgsFunc);
+	QCOMPARE(proxy.bindingCount(), 1);
+	QVERIFY(proxy.isConnected(&tester));
+
+	QCOMPARE(tester.receiverCount(SIGNAL(aSignal(int))), 1);
+	QCOMPARE(tester.receiverCount(SIGNAL(destroyed(QObject*))), 1);
+
+	proxy.bind(&tester, QEvent::MouseButtonPress, noArgsFunc);
+	QCOMPARE(proxy.bindingCount(), 2);
+
+	proxy.unbind(&tester, SIGNAL(aSignal(int)));
+	QCOMPARE(proxy.bindingCount(), 1);
+	QVERIFY(proxy.isConnected(&tester));
+
+	// check that the proxy is still listening for destruction
+	// of the sender
+	QCOMPARE(tester.receiverCount(SIGNAL(destroyed(QObject*))), 1);
+
+	proxy.unbind(&tester, QEvent::MouseButtonPress);
+	QCOMPARE(proxy.bindingCount(), 0);
+	QVERIFY(!proxy.isConnected(&tester));
+
+	// check that the proxy is no longer listening for destruction
+	// of the sender
+	QCOMPARE(tester.receiverCount(SIGNAL(destroyed(QObject*))), 0);
+}
+
 void TestQtCallback::testConnectPerf()
 {
 	QSKIP("Benchmark disabled", SkipAll);
