@@ -64,7 +64,7 @@ bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 		return false;
 	}
 
-	m_bindings << binding;
+	m_bindings.insert(sender, binding);
 	return true;
 }
 
@@ -78,7 +78,7 @@ bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacall
 	sender->installEventFilter(this);
 
 	EventBinding binding(sender, event, callback, filter);
-	m_eventBindings << binding;
+	m_eventBindings.insert(sender, binding);
 
 	return true;
 }
@@ -86,10 +86,11 @@ bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacall
 void QtCallbackProxy::unbind(QObject* sender, const char* signal)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
-	QMutableVectorIterator<Binding> iter(m_bindings);
+	QMutableHashIterator<QObject*,Binding> iter(m_bindings);
 	while (iter.hasNext())
 	{
-		const Binding& binding = iter.next();
+		iter.next();
+		const Binding& binding = iter.value();
 		if (binding.sender == sender &&
 		    binding.signalIndex == signalIndex)
 		{
@@ -103,10 +104,11 @@ void QtCallbackProxy::unbind(QObject* sender, const char* signal)
 void QtCallbackProxy::unbind(QObject* sender, QEvent::Type event)
 {
 	int activeBindingCount = 0;
-	QMutableVectorIterator<EventBinding> iter(m_eventBindings);
+	QMutableHashIterator<QObject*,EventBinding> iter(m_eventBindings);
 	while (iter.hasNext())
 	{
-		const EventBinding& binding = iter.next();
+		iter.next();
+		const EventBinding& binding = iter.value();
 		if (binding.sender == sender)
 		{
 			++activeBindingCount;
@@ -174,8 +176,9 @@ void QtCallbackProxy::disconnectEvent(QObject* sender, QEvent::Type event)
 
 const QtCallbackProxy::Binding* QtCallbackProxy::matchBinding(QObject* sender, int signalIndex) const
 {
-	for (int i = 0; i < m_bindings.count(); i++) {
-		const Binding& binding = m_bindings.at(i);
+	QHash<QObject*,Binding>::const_iterator iter = m_bindings.find(sender);
+	for (;iter != m_bindings.end() && iter.key() == sender;++iter) {
+		const Binding& binding = *iter;
 		if (binding.sender == sender && binding.signalIndex == signalIndex) {
 			return &binding;
 		}

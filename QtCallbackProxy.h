@@ -133,8 +133,8 @@ class QtCallbackProxy : public QObject
 
 		static bool checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes);
 
-		QVector<Binding> m_bindings;
-		QVector<EventBinding> m_eventBindings;
+		QHash<QObject*,Binding> m_bindings;
+		QHash<QObject*,EventBinding> m_eventBindings;
 };
 
 Q_DECLARE_METATYPE(QtCallbackProxy*)
