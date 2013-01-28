@@ -152,14 +152,16 @@ void TestQtCallback::testArgLimit()
 void TestQtCallback::testSignalToLambda()
 {
 #ifdef COMPILER_SUPPORTS_LAMBDAS
-    CallbackTester tester;
-    int sum = 0;
-    QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), function<void(int)>(
-                                         [&](int value) { sum += value; }
-    ));
-    tester.emitASignal(12);
-    tester.emitASignal(7);
-    QCOMPARE(sum, 19);
+	CallbackTester tester;
+	int sum = 0;
+	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), function<void(int)>(
+										 [&](int value) { sum += value; }
+	));
+	tester.emitASignal(12);
+	tester.emitASignal(7);
+	QCOMPARE(sum, 19);
+#else
+	QSKIP("Compiler does not support C++11 lambdas", SkipAll);
 #endif
 }
 
