@@ -90,6 +90,6 @@ qt-signal-tools is licensed under the BSD license.
 
 ## Related Projects & Reading
 
-Qt Signal Adapters - Library for connecting signals to Boost function objects: http://sourceforge.net/projects/qtsignaladapter/
-sigfwd - Library for connecting signals to function objects.  Uses Boost. https://bitbucket.org/edd/sigfwd/wiki/Home
-Qt 5 meta-object system changes - http://blog.qt.digia.com/blog/2012/06/22/changes-to-the-meta-object-system-in-qt-5/
+ * Qt Signal Adapters - Library for connecting signals to Boost function objects: http://sourceforge.net/projects/qtsignaladapter/
+ * sigfwd - Library for connecting signals to function objects.  Uses Boost. https://bitbucket.org/edd/sigfwd/wiki/Home
+ * Qt 5 meta-object system changes - http://blog.qt.digia.com/blog/2012/06/22/changes-to-the-meta-object-system-in-qt-5/
