@@ -4,9 +4,13 @@
 
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
-	QByteArray normalizedSignature = QMetaObject::normalizedSignature(signal + 1);
 	const QMetaObject* metaObject = object->metaObject();
-	return metaObject->indexOfMethod(normalizedSignature.constData());
+	int signalIndex = metaObject->indexOfMethod(signal + 1);
+	if (signalIndex < 0) {
+		QByteArray normalizedSignature = QMetaObject::normalizedSignature(signal + 1);
+		signalIndex = metaObject->indexOfMethod(normalizedSignature.constData());
+	}
+	return signalIndex;
 }
 
 QtCallbackProxy::QtCallbackProxy(QObject* parent)
