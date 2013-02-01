@@ -98,7 +98,7 @@ class QtSignalForwarder : public QObject
 		 */
 		static bool connect(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 
-		static void disconnectCallbacks(QObject* sender, const char* signal);
+		static void disconnect(QObject* sender, const char* signal);
 
 		/** Install a proxy which invokes @p callback when @p sender receives @p event.
 		 */

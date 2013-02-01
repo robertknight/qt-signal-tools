@@ -33,7 +33,7 @@ void TestQtCallback::testSignalProxy()
 	QCOMPARE(tester.values, QList<int>() << 32);
 	tester.values.clear();
 
-	QtSignalForwarder::disconnectCallbacks(&tester, SIGNAL(aSignal(int)));
+	QtSignalForwarder::disconnect(&tester, SIGNAL(aSignal(int)));
 
 	tester.emitASignal(15);
 	QCOMPARE(tester.values, QList<int>());
@@ -75,7 +75,7 @@ void TestQtCallback::testSignalToFunctionObject()
 	QCOMPARE(tester.values, QList<int>() << 18);
 	tester.values.clear();
 
-	QtSignalForwarder::disconnectCallbacks(&tester, SIGNAL(aSignal(int)));
+	QtSignalForwarder::disconnect(&tester, SIGNAL(aSignal(int)));
 	tester.emitASignal(19);
 	QCOMPARE(tester.values, QList<int>());
 	tester.values.clear();

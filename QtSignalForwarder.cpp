@@ -196,7 +196,7 @@ bool QtSignalForwarder::connect(QObject* sender, const char* signal, const QtMet
 	return installProxy(sender)->bind(sender, signal, callback);
 }
 
-void QtSignalForwarder::disconnectCallbacks(QObject* sender, const char* signal)
+void QtSignalForwarder::disconnect(QObject* sender, const char* signal)
 {
 	installProxy(sender)->unbind(sender, signal);
 }
