@@ -9,16 +9,52 @@
 #include <QtCore/QVariant>
 #include <QtCore/QWeakPointer>
 
+/** QtCallbackBase is an object which stores the receiver, method name
+ * and optionally, some of the arguments for a Qt signal or slot function call.
+ *
+ * The method can then be invoked on the receiver using the invokeWithArgs() method.
+ *
+ * This is conceptually similar to std::function and std::bind except:
+ *
+ *  - If the receiver is destroyed before the bound function is invoked, attempting to
+ *    call the method has no effect.
+ *  - Type matches between the supplied arguments and those expected by the method
+ *    are not checked until the call is made.
+ *
+ * QtCallbackBase can be invoked with any number of arguments and the types are not
+ * checked at compile time.  The QtCallback<N> subclasses provide function objects
+ * which take N arguments that are passed to the method.
+ *
+ * Example Usage:
+ *
+ *   QtCallbackBase callback(myLabel, SLOT(setText(QString)));
+ *   callback.invokeWithArgs(Q_ARG(QString, "Hello World"))
+ *
+ * Or using QtCallback:
+ *
+ *   QtCallback1<QString> callback(myLabel, SLOT(setText(QString)));
+ *   callback("Hello World");
+ */
 class QtCallbackBase
 {
 	public:
 		QtCallbackBase();
+
+		/** Constructs a callback which will call @p method on @p receiver.
+		 */
 		QtCallbackBase(QObject* receiver, const char* method);
+
 		QtCallbackBase(const QtCallbackBase& other);
 
+		/** Bind the @p index'th parameter in the method to call to @p value. */
 		void bind(int index, const QVariant& value);
+
+		/** Bind the next currently unbound parameter in the method to call to @p value. */
 		void bind(const QVariant& value);
 
+		/** Attempt to invoke the stored method on the receiver.
+		 * Returns false if the types do not match or the receiver has been destroyed.
+		 */
 		bool invokeWithArgs(const QGenericArgument& arg1 = QGenericArgument(),
 		                    const QGenericArgument& arg2 = QGenericArgument(),
 					        const QGenericArgument& arg3 = QGenericArgument(),
@@ -26,12 +62,25 @@ class QtCallbackBase
 							const QGenericArgument& arg5 = QGenericArgument(),
 							const QGenericArgument& arg6 = QGenericArgument()) const;
 
+		/** Returns the number of parameters that the bound method has. */
 		int parameterCount() const;
+
+		/** Returns the Qt type ID of the @p index'th parameter to the bound method. */
 		int parameterType(int index) const;
 
+		/** Returns the number of parameters to the method which have not been bound
+		 * with bind()
+		 */
 		int unboundParameterCount() const;
+
+		/** Returns the Qt type ID of the @p index'th parameter to the method
+		 * which has not yet been bound.
+		 */
 		int unboundParameterType(int index) const;
 
+		/** Returns true if the @p index'th argument to the bound method
+		 * has been set using bind()
+		 */
 		bool isBound(int index) const;
 
 	private:
