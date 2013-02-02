@@ -19,10 +19,12 @@
 #endif
 #endif
 
+#ifdef QST_COMPILER_SUPPORTS_LAMBDAS
 // sets whether the C++11 standard libraries should
 // be used.  If not, we fall back to the TR1 versions.
 // A similar define could also be used to use Boost instead.
 #define QST_USE_CPP11_LIBS
+#endif
 
 // include headers that provide function<> and bind()
 #if defined(_MSC_VER) || defined(QST_USE_CPP11_LIBS)
