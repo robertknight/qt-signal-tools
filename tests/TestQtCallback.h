@@ -44,6 +44,11 @@ class CallbackTester : public QObject
 			emit noArgSignal();
 		}
 
+		void emitStringSignal(const QString& arg)
+		{
+			emit stringSignal(arg);
+		}
+
 		// expose protected QObject::receivers() method
 		int receiverCount(const char* signal) const
 		{
@@ -61,4 +66,5 @@ class CallbackTester : public QObject
 		void aSignal(int arg);
 		void noArgSignal();
 		void valuesChanged();
+		void stringSignal(const QString& arg);
 };

@@ -220,7 +220,8 @@ QMA_DECLARE_ADAPTER_IMPL(5,
   QMA_ARG_TYPE(0) QMA_COMMA QMA_ARG_TYPE(1) QMA_COMMA QMA_ARG_TYPE(2) QMA_COMMA QMA_ARG_TYPE(3) QMA_COMMA QMA_ARG_TYPE(4)
 )
 
-/** A wrapper around either a QtCallback or a function object (such as std::function)
+/** A wrapper around either a QtCallback or a function object (eg.
+ * std::tr1::function, boost::function, a C++11 lambda)
  * which can invoke the function given an array of QGenericArgument objects.
  */
 class QtMetacallAdapter

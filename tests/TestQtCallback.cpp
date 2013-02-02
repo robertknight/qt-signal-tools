@@ -274,7 +274,22 @@ void TestQtCallback::testSafeBinder()
 	function<QString()> getName(safe_bind(object, &QObject::objectName));
 	QCOMPARE(getName(), QString("testObject"));
 	delete object;
+	object = 0;
 	QCOMPARE(getName(), QString());
+
+	CallbackTester tester;
+	object = new QObject;
+
+	// test with QObject + QtSignalForwarder
+	QtSignalForwarder::connect(&tester, SIGNAL(stringSignal(QString)),
+	  function<void(QString)>(safe_bind(object, &QObject::setObjectName)));
+	tester.emitStringSignal("testObject2");
+	QCOMPARE(object->objectName(), QString("testObject2"));
+	delete object;
+
+	// try changing the name, this will have no effect now
+	// as the object has been destroyed
+	tester.emitStringSignal("newName");
 
 	// test with something that is not
 	// a QObject
