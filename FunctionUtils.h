@@ -3,8 +3,12 @@
 // include headers that provide function<> and bind()
 #ifdef Q_CC_MSVC
 #include <functional>
+#include <memory>
+#include <type_traits>
 #else
 #include <tr1/functional>
+#include <tr1/memory>
+#include <tr1/type_traits>
 #endif
 
 // tests for relevant C++11 features
@@ -26,4 +30,14 @@
 #endif
 #endif
 
+#define QST_COMMA ,
+
+template <bool, class T>
+struct enable_if;
+
+template <class T>
+struct enable_if<true,T>
+{
+	typedef T type;
+};
 

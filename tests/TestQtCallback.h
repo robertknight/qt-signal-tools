@@ -22,6 +22,8 @@ class TestQtCallback : public QObject
 		void testUnbind();
 		void testDelayedCall();
 
+		void testSafeBinder();
+
 		void testConnectPerf();
 };
 

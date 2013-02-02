@@ -1,5 +1,7 @@
 #include "TestQtCallback.h"
 
+#include "SafeBinder.h"
+
 #include <QtCore/QDebug>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QEventLoop>
@@ -8,6 +10,7 @@
 
 using namespace std::tr1;
 using namespace std::tr1::placeholders;
+using namespace QtSignalTools;
 
 void TestQtCallback::testInvoke()
 {
@@ -261,6 +264,26 @@ void TestQtCallback::testDelayedCall()
 
 	QVERIFY(timer.elapsed() >= MIN_DELAY);
 	QCOMPARE(tester.values, QList<int>() << 42);
+}
+
+void TestQtCallback::testSafeBinder()
+{
+	// test with a QObject
+	QObject* object = new QObject;
+	object->setObjectName("testObject");
+	function<QString()> getName(safe_bind(object, &QObject::objectName));
+	QCOMPARE(getName(), QString("testObject"));
+	delete object;
+	QCOMPARE(getName(), QString());
+
+	// test with something that is not
+	// a QObject
+	shared_ptr<QString> string(new QString);
+	string->append("testString");
+	function<QString()> getTrimmed(safe_bind(weak_ptr<QString>(string), &QString::trimmed));
+	QCOMPARE(getTrimmed(), QString("testString"));
+	string.reset();
+	QCOMPARE(getTrimmed(), QString());
 }
 
 QTEST_MAIN(TestQtCallback)
