@@ -6,12 +6,9 @@ qt-signal-tools is a collection of utility classes related to signal and slots i
 
 ## Requirements
 
- * Qt 4.8*
- * For connecting signals and events to arbitrary functions, a function wrapper
-is needed, such as `std::tr1::function` (C++03 compilers with a TR1 library), `boost::function` or
-`std::function` (C++11 std library).
-
-(* Could be adapted for earlier versions of Qt 4 if necessary)
+ * Qt 4.8 (could be adapted for earlier Qt versions if necessary)
+ * The TR1 standard library (for C++03 compilers) or the C++11 standard library
+  (for newer compilers when C++11 support is enabled).
 
 ## Classes
 
