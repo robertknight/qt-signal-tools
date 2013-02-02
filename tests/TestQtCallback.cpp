@@ -8,8 +8,14 @@
 
 #include <iostream>
 
+#if defined(QST_USE_CPP11_LIBS)
+using namespace std;
+using namespace std::placeholders;
+#else
 using namespace std::tr1;
 using namespace std::tr1::placeholders;
+#endif
+
 using namespace QtSignalTools;
 
 void TestQtCallback::testInvoke()

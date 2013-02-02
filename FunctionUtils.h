@@ -1,16 +1,5 @@
 #pragma once
 
-// include headers that provide function<> and bind()
-#ifdef Q_CC_MSVC
-#include <functional>
-#include <memory>
-#include <type_traits>
-#else
-#include <tr1/functional>
-#include <tr1/memory>
-#include <tr1/type_traits>
-#endif
-
 // tests for relevant C++11 features
 
 // Visual C++
@@ -30,8 +19,37 @@
 #endif
 #endif
 
+// sets whether the C++11 standard libraries should
+// be used.  If not, we fall back to the TR1 versions.
+// A similar define could also be used to use Boost instead.
+#define QST_USE_CPP11_LIBS
+
+// include headers that provide function<> and bind()
+#if defined(_MSC_VER) || defined(QST_USE_CPP11_LIBS)
+#include <functional>
+#include <memory>
+#include <type_traits>
+
+#ifndef _MSC_VER
+// even under C++11, we are still using the TR1 version
+// of result_of<>
+#include <tr1/functional>
+#endif
+
+#else
+#include <tr1/functional>
+#include <tr1/memory>
+#include <tr1/type_traits>
+#endif
+
 #define QST_COMMA ,
 
+namespace QtSignalTools
+{
+
+// enable_if is actually provided by all
+// supported compilers, but is under an extension
+// namespace under GCC
 template <bool, class T>
 struct enable_if;
 
@@ -40,4 +58,18 @@ struct enable_if<true,T>
 {
 	typedef T type;
 };
+
+#if defined(QST_USE_CPP11_LIBS)
+using std::is_base_of;
+using std::shared_ptr;
+#else
+using std::tr1::is_base_of;
+using std::tr1::shared_ptr;
+#endif
+
+// TODO - Use std::result_of instead under
+// C++11
+using std::tr1::result_of;
+
+}
 

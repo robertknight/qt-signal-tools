@@ -5,18 +5,18 @@
 #include <QtCore/QDebug>
 #include <QtCore/QSharedPointer>
 
-// TODO: If available, we should use the version from
-// std instead of std::tr1
-using std::tr1::is_base_of;
-using std::tr1::result_of;
-using std::tr1::shared_ptr;
-
 namespace QtSignalTools
 {
 
-template <class Ptr>
+// StrongRef is a helper class which takes
+// a weak reference to an object and promotes
+// it to a strong reference for the lifetime of the StrongRef instance,
+// providing access to the underlying object via a data() method.
+//
+template <class T>
 struct StrongRef;
 
+// version for QWeakPointer<T>
 template <class T>
 struct StrongRef<QWeakPointer<T> >
 {
@@ -37,6 +37,7 @@ struct StrongRef<QWeakPointer<T> >
 	QWeakPointer<T> m_weakRef;
 };
 
+// version for weak_ptr<T>
 template <template <class T> class WeakPointer, class T>
 struct StrongRef<WeakPointer<T> >
 {
@@ -81,7 +82,6 @@ class SafeBinder
 		SAFE_BINDER_CALL_OP(template <class T1 QST_COMMA class T2 QST_COMMA class T3>,
 							const T1& arg1 QST_COMMA const T2& arg2 QST_COMMA const T3& arg3,
 							arg1 QST_COMMA arg2 QST_COMMA arg3);
-
 
 	private:
 		Receiver m_receiver;
