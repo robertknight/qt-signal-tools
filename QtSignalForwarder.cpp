@@ -1,4 +1,4 @@
-#include "QtCallbackProxy.h"
+#include "QtSignalForwarder.h"
 
 #include <QtCore/QDebug>
 #include <QtCore/QMutex>
@@ -10,7 +10,7 @@ const int DESTROYED_SIGNAL_INDEX = 0;
 
 struct ProxyMap
 {
-	QHash<QObject*,QtCallbackProxy*> map;
+	QHash<QObject*,QtSignalForwarder*> map;
 	QMutex mutex;
 };
 
@@ -32,12 +32,12 @@ int qtObjectSignalIndex(const QObject* object, const char* signal)
 	return signalIndex;
 }
 
-QtCallbackProxy::QtCallbackProxy(QObject* parent)
+QtSignalForwarder::QtSignalForwarder(QObject* parent)
 	: QObject(parent)
 {
 }
 
-bool QtCallbackProxy::checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes)
+bool QtSignalForwarder::checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes)
 {
 	int receiverArgTypes[QTMETACALL_MAX_ARGS] = {-1};
 	int receiverArgCount = callback.getArgTypes(receiverArgTypes);
@@ -60,7 +60,7 @@ bool QtCallbackProxy::checkTypeMatch(const QtMetacallAdapter& callback, const QL
 	return true;
 }
 
-void QtCallbackProxy::setupDestroyNotify(QObject* sender)
+void QtSignalForwarder::setupDestroyNotify(QObject* sender)
 {
 	if (!m_bindings.contains(sender) &&
 	    !m_eventBindings.contains(sender))
@@ -70,7 +70,7 @@ void QtCallbackProxy::setupDestroyNotify(QObject* sender)
 	}
 }
 
-bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
+bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
 	if (signalIndex < 0) {
@@ -96,7 +96,7 @@ bool QtCallbackProxy::bind(QObject* sender, const char* signal, const QtMetacall
 	return true;
 }
 
-bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
+bool QtSignalForwarder::bind(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
 	if (!checkTypeMatch(callback, QList<QByteArray>())) {
 		qWarning() << "Callback does not take 0 arguments";
@@ -112,7 +112,7 @@ bool QtCallbackProxy::bind(QObject* sender, QEvent::Type event, const QtMetacall
 	return true;
 }
 
-void QtCallbackProxy::unbind(QObject* sender, const char* signal)
+void QtSignalForwarder::unbind(QObject* sender, const char* signal)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
 	QHash<QObject*,Binding>::iterator iter = m_bindings.find(sender);
@@ -130,7 +130,7 @@ void QtCallbackProxy::unbind(QObject* sender, const char* signal)
 	}
 }
 
-void QtCallbackProxy::unbind(QObject* sender, QEvent::Type event)
+void QtSignalForwarder::unbind(QObject* sender, QEvent::Type event)
 {
 	QHash<QObject*,EventBinding>::iterator iter = m_eventBindings.find(sender);
 	while (iter != m_eventBindings.end() && iter.key() == sender) {
@@ -146,7 +146,7 @@ void QtCallbackProxy::unbind(QObject* sender, QEvent::Type event)
 	}
 }
 
-void QtCallbackProxy::unbind(QObject* sender)
+void QtSignalForwarder::unbind(QObject* sender)
 {
 	m_bindings.remove(sender);
 	m_eventBindings.remove(sender);
@@ -159,7 +159,7 @@ void QtCallbackProxy::unbind(QObject* sender)
 	}
 }
 
-QtCallbackProxy* QtCallbackProxy::installProxy(QObject* sender)
+QtSignalForwarder* QtSignalForwarder::installProxy(QObject* sender)
 {
 	// We currently create one proxy object per sender.
 	//
@@ -171,47 +171,47 @@ QtCallbackProxy* QtCallbackProxy::installProxy(QObject* sender)
 	// and the time required to instantiate a proxy object the first time
 	// a callback is installed for a given sender
 	// 
-	QtCallbackProxy* proxy = 0;
+	QtSignalForwarder* proxy = 0;
 	{
 		QMutexLocker lock(&theProxyMap()->mutex);
 		proxy = theProxyMap()->map.value(sender);
 	}
 
 	if (!proxy) {
-		proxy = new QtCallbackProxy(sender);
+		proxy = new QtSignalForwarder(sender);
 		QMutexLocker lock(&theProxyMap()->mutex);
 		theProxyMap()->map.insert(sender,proxy);
 	}
 	return proxy;
 }
 
-void QtCallbackProxy::removeProxy(QObject* sender)
+void QtSignalForwarder::removeProxy(QObject* sender)
 {
 	QMutexLocker lock(&theProxyMap()->mutex);
 	theProxyMap()->map.remove(sender);
 }
 
-bool QtCallbackProxy::connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
+bool QtSignalForwarder::connect(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
 	return installProxy(sender)->bind(sender, signal, callback);
 }
 
-void QtCallbackProxy::disconnectCallbacks(QObject* sender, const char* signal)
+void QtSignalForwarder::disconnect(QObject* sender, const char* signal)
 {
 	installProxy(sender)->unbind(sender, signal);
 }
 
-bool QtCallbackProxy::connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
+bool QtSignalForwarder::connect(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
 	return installProxy(sender)->bind(sender, event, callback, filter);
 }
 
-void QtCallbackProxy::disconnectEvent(QObject* sender, QEvent::Type event)
+void QtSignalForwarder::disconnect(QObject* sender, QEvent::Type event)
 {
 	installProxy(sender)->unbind(sender, event);
 }
 
-const QtCallbackProxy::Binding* QtCallbackProxy::matchBinding(QObject* sender, int signalIndex) const
+const QtSignalForwarder::Binding* QtSignalForwarder::matchBinding(QObject* sender, int signalIndex) const
 {
 	QHash<QObject*,Binding>::const_iterator iter = m_bindings.find(sender);
 	for (;iter != m_bindings.end() && iter.key() == sender;++iter) {
@@ -223,12 +223,12 @@ const QtCallbackProxy::Binding* QtCallbackProxy::matchBinding(QObject* sender, i
 	return 0;
 }
 
-void QtCallbackProxy::failInvoke(const QString& error)
+void QtSignalForwarder::failInvoke(const QString& error)
 {
 	qWarning() << "Failed to invoke callback" << error;
 }
 
-int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** arguments)
+int QtSignalForwarder::qt_metacall(QMetaObject::Call call, int methodId, void** arguments)
 {
 	// performance note - QObject::sender() and senderSignalIndex()
 	// are linear in the number of connections to this object
@@ -272,7 +272,7 @@ int QtCallbackProxy::qt_metacall(QMetaObject::Call call, int methodId, void** ar
 	return methodId;
 }
 
-bool QtCallbackProxy::eventFilter(QObject* watched, QEvent* event)
+bool QtSignalForwarder::eventFilter(QObject* watched, QEvent* event)
 {
 	QHash<QObject*,EventBinding>::iterator iter = m_eventBindings.find(watched);
 	for (;iter != m_eventBindings.end() && iter.key() == watched; iter++) {
@@ -285,22 +285,22 @@ bool QtCallbackProxy::eventFilter(QObject* watched, QEvent* event)
 	return QObject::eventFilter(watched, event);
 }
 
-int QtCallbackProxy::bindingCount() const
+int QtSignalForwarder::bindingCount() const
 {
 	return m_bindings.size() + m_eventBindings.size();
 }
 
-bool QtCallbackProxy::isConnected(QObject* sender) const
+bool QtSignalForwarder::isConnected(QObject* sender) const
 {
 	return m_bindings.contains(sender) || m_eventBindings.contains(sender);
 }
 
-void QtCallbackProxy::delayedCall(int ms, const QtMetacallAdapter& adapter)
+void QtSignalForwarder::delayedCall(int ms, const QtMetacallAdapter& adapter)
 {
 	QTimer* timer = new QTimer;
 	timer->setSingleShot(true);
 	timer->setInterval(ms);
-	QtCallbackProxy::connectCallback(timer, SIGNAL(timeout()), adapter);
+	QtSignalForwarder::connect(timer, SIGNAL(timeout()), adapter);
 	connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
 	timer->start();
 }

@@ -1,7 +1,7 @@
 #include <QtTest/QTest>
 
 #include "QtCallback.h"
-#include "QtCallbackProxy.h"
+#include "QtSignalForwarder.h"
 #include "FunctionUtils.h"
 
 class TestQtCallback : public QObject

@@ -5,7 +5,7 @@
 #include <QtCore/QEvent>
 #include <QtCore/QVector>
 
-/** QtCallbackProxy provides a way to connect Qt signals to QtCallback objects
+/** QtSignalForwarder provides a way to connect Qt signals to QtCallback objects
  * or function objects (wrappers around functions such as std::tr1::function,
  * boost::function or std::function).
  * 
@@ -13,7 +13,7 @@
  * http://qt-project.org/wiki/New_Signal_Slot_Syntax .  This is especially useful
  * when combined with C++11's lambdas.
  *
- * QtCallbackProxy provides a way to simulate this under Qt 4 with C++03 by installing
+ * QtSignalForwarder provides a way to simulate this under Qt 4 with C++03 by installing
  * a proxy object between the original sender of the signal and the receiver.  The proxy
  * receives the signal and then invokes the callback functor with the signal's arguments.
  *
@@ -27,30 +27,33 @@
  *  QPushButton button;
  *  QtCallback callback(&receiver, SLOT(buttonClicked(int)));
  *  callback.bind(42);
- *  QtCallbackProxy::connectCallback(&button, SIGNAL(clicked(bool)), callback);
+ *  QtSignalForwarder::connect(&button, SIGNAL(clicked(bool)), callback);
  *  button.click();
  *
  * Will invoke Receiver::buttonClicked(42)
  *
- * You can also use QtCallbackProxy to invoke callbacks when an object receives an event
+ * You can also use QtSignalForwarder to invoke callbacks when an object receives an event
  * (as opposed to emits a signal).  For example:
  *
- *   QtCallbackProxy::connectEvent(widget, QEvent::Enter,
+ *   QtSignalForwarder::connect(widget, QEvent::Enter,
  *     QtCallback(otherWidget, SLOT(setVisible(bool))).bind(true));
- *   QtCallbackProxy::connectEvent(widget, QEvent::Leave,
+ *   QtSignalForwarder::connect(widget, QEvent::Leave,
  *     QtCallback(otherWidget, SLOT(setVisible(bool))).bind(false));
  *
  * Will show 'otherWidget' when the mouse hovers over 'widget' and hide it otherwise.
  */
-class QtCallbackProxy : public QObject
+class QtSignalForwarder : public QObject
 {
 	// no Q_OBJECT macro here - see qt_metacall() re-implementation
 	// below
 	
 	public:
+		using QObject::connect;
+		using QObject::disconnect;
+
 		typedef bool (*EventFilterFunc)(QObject*,QEvent*);
 
-		QtCallbackProxy(QObject* parent = 0);
+		QtSignalForwarder(QObject* parent = 0);
 
 		/** Set up a binding so that @p callback is invoked when
 		 * @p sender emits @p signal.  If @p signal has default arguments,
@@ -77,7 +80,7 @@ class QtCallbackProxy : public QObject
 		void unbind(QObject* sender);
 
 		/** Returns the total number of active bindings for this
-		 * QtCallbackProxy instance.
+		 * QtSignalForwarder instance.
 		 */
 		int bindingCount() const;
 
@@ -93,14 +96,14 @@ class QtCallbackProxy : public QObject
 
 		/** Install a proxy which invokes @p callback when @p sender emits @p signal.
 		 */
-		static bool connectCallback(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
+		static bool connect(QObject* sender, const char* signal, const QtMetacallAdapter& callback);
 
-		static void disconnectCallbacks(QObject* sender, const char* signal);
+		static void disconnect(QObject* sender, const char* signal);
 
 		/** Install a proxy which invokes @p callback when @p sender receives @p event.
 		 */
-		static bool connectEvent(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
-		static void disconnectEvent(QObject* sender, QEvent::Type event);
+		static bool connect(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
+		static void disconnect(QObject* sender, QEvent::Type event);
 
 		// re-implemented from QObject
 		virtual bool eventFilter(QObject* watched, QEvent* event);
@@ -149,12 +152,12 @@ class QtCallbackProxy : public QObject
 		void setupDestroyNotify(QObject* sender);
 
 		static bool checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes);
-		static QtCallbackProxy* installProxy(QObject* sender);
+		static QtSignalForwarder* installProxy(QObject* sender);
 		static void removeProxy(QObject* sender);
 
 		QHash<QObject*,Binding> m_bindings;
 		QHash<QObject*,EventBinding> m_eventBindings;
 };
 
-Q_DECLARE_METATYPE(QtCallbackProxy*)
+Q_DECLARE_METATYPE(QtSignalForwarder*)
 

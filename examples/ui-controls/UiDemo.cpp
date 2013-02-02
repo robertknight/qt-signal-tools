@@ -1,4 +1,4 @@
-#include "QtCallbackProxy.h"
+#include "QtSignalForwarder.h"
 
 #include <QtGui/QApplication>
 #include <QtGui/QLabel>
@@ -31,33 +31,33 @@ int main(int argc, char** argv)
 	QSlider* slider = new QSlider(Qt::Horizontal);
 
 	// create a callback object which sets the slider's value
-	// and use QtCallbackProxy to invoke it when the button is
+	// and use QtSignalForwarder to invoke it when the button is
 	// clicked
 	QtCallback button1Callback(slider, SLOT(setValue(int)));
 	button1Callback.bind(10);
-	QtCallbackProxy::connectCallback(button1, SIGNAL(clicked(bool)), button1Callback);
+	QtSignalForwarder::connect(button1, SIGNAL(clicked(bool)), button1Callback);
 
 	// setup another couple of buttons.
 	// Here we use a more succinct syntax to create the callback
-	QtCallbackProxy::connectCallback(button2, SIGNAL(clicked(bool)),
+	QtSignalForwarder::connect(button2, SIGNAL(clicked(bool)),
 	  QtCallback(slider, SLOT(setValue(int))).bind(50));
 
 #ifdef ENABLE_QTCALLBACK_TR1_FUNCTION
 	// if tr1/function is available, use that to create a callback
-	QtCallbackProxy::connectCallback(button3, SIGNAL(clicked(bool)),
+	QtSignalForwarder::connect(button3, SIGNAL(clicked(bool)),
 	  std::tr1::function<void()>(std::tr1::bind(&QAbstractSlider::setValue, slider, 80)));
 #else
-	QtCallbackProxy::connectCallback(button3, SIGNAL(clicked(bool)),
+	QtSignalForwarder::connect(button3, SIGNAL(clicked(bool)),
 	  QtCallback(slider, SLOT(setValue(int))).bind(80));
 #endif
 
-	QtCallbackProxy::connectEvent(slider, QEvent::Enter,
+	QtSignalForwarder::connect(slider, QEvent::Enter,
 	  QtCallback(focusLabel, SLOT(setVisible(bool))).bind(true));
 
-	QtCallbackProxy::connectEvent(slider, QEvent::Leave,
+	QtSignalForwarder::connect(slider, QEvent::Leave,
 	  QtCallback(focusLabel, SLOT(setVisible(bool))).bind(false));
 
-	QtCallbackProxy::connectEvent(hideMeLabel, QEvent::MouseButtonRelease,
+	QtSignalForwarder::connect(hideMeLabel, QEvent::MouseButtonRelease,
 	  QtCallback(widget, SLOT(close())), matchRightClick);
 
 	layout->addWidget(button1);

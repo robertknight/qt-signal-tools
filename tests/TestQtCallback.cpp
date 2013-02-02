@@ -29,26 +29,26 @@ void TestQtCallback::testInvoke()
 void TestQtCallback::testSignalProxy()
 {
 	CallbackTester tester;
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
 	  QtCallback(&tester, SLOT(addValue(int))));
 	tester.emitASignal(32);
 
 	QCOMPARE(tester.values, QList<int>() << 32);
 	tester.values.clear();
 
-	QtCallbackProxy::disconnectCallbacks(&tester, SIGNAL(aSignal(int)));
+	QtSignalForwarder::disconnect(&tester, SIGNAL(aSignal(int)));
 
 	tester.emitASignal(15);
 	QCOMPARE(tester.values, QList<int>());
 	tester.values.clear();
 
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
 	  QtCallback(&tester, SLOT(addValue(int))).bind(10));
 	tester.emitASignal(11);
 	QCOMPARE(tester.values, QList<int>() << 10);
 	tester.values.clear();
 
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(noArgSignal()),
+	QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()),
 	  QtCallback(&tester, SLOT(addValue(int))));
 	tester.emitNoArgSignal();
 	QCOMPARE(tester.values, QList<int>());
@@ -57,14 +57,14 @@ void TestQtCallback::testSignalProxy()
 void TestQtCallback::testEventProxy()
 {
 	CallbackTester tester;
-	QtCallbackProxy::connectEvent(&tester, QEvent::MouseButtonPress,
+	QtSignalForwarder::connect(&tester, QEvent::MouseButtonPress,
 	  QtCallback(&tester, SLOT(addValue(int))).bind(1));
 	QMouseEvent event(QEvent::MouseButtonPress, QPoint(0,0), Qt::LeftButton, Qt::LeftButton, 0);
 	QCoreApplication::sendEvent(&tester, &event);
 	QCOMPARE(tester.values, QList<int>() << 1);
 	tester.values.clear();
 
-	QtCallbackProxy::disconnectEvent(&tester, QEvent::MouseButtonPress);
+	QtSignalForwarder::disconnect(&tester, QEvent::MouseButtonPress);
 	QCoreApplication::sendEvent(&tester, &event);
 	QCOMPARE(tester.values, QList<int>());
 }
@@ -72,18 +72,18 @@ void TestQtCallback::testEventProxy()
 void TestQtCallback::testSignalToFunctionObject()
 {
 	CallbackTester tester;
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
 	  function<void()>(bind(&CallbackTester::addValue, &tester, 18)));
 	tester.emitASignal(42);
 	QCOMPARE(tester.values, QList<int>() << 18);
 	tester.values.clear();
 
-	QtCallbackProxy::disconnectCallbacks(&tester, SIGNAL(aSignal(int)));
+	QtSignalForwarder::disconnect(&tester, SIGNAL(aSignal(int)));
 	tester.emitASignal(19);
 	QCOMPARE(tester.values, QList<int>());
 	tester.values.clear();
 
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
 	  function<void(int)>(bind(&CallbackTester::addValue, &tester, _1)));
 	tester.emitASignal(39);
 	QCOMPARE(tester.values, QList<int>() << 39);
@@ -91,7 +91,7 @@ void TestQtCallback::testSignalToFunctionObject()
 	// check that a signal arg count mismatch
 	// is caught
 	tester.values.clear();
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(noArgSignal()),
+	QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()),
 	  function<void(int)>(bind(&CallbackTester::addValue, &tester, _1)));
 	tester.emitNoArgSignal();
 	QCOMPARE(tester.values, QList<int>());
@@ -107,7 +107,7 @@ int sumInputs(int value)
 void TestQtCallback::testSignalToPlainFunc()
 {
 	CallbackTester tester;
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), sumInputs);
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), sumInputs);
 	tester.emitASignal(5);
 	tester.emitASignal(8);
 	QCOMPARE(sumInputs(0), 13);
@@ -119,7 +119,7 @@ void TestQtCallback::testArgCast()
 	// when it is emitted.
 	QList<qint64> list;
 	CallbackTester tester;
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)),
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
 	  function<void(int)>(bind(&QList<qint64>::push_back, &list, _1)));
 	tester.emitASignal(42);
 	QCOMPARE(list, QList<qint64>() << 42LL);
@@ -133,10 +133,10 @@ void twoArgsFunc(int,int) {}
 void TestQtCallback::testArgTypeCheck()
 {
 	CallbackTester tester;
-	QVERIFY(QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), intFunc));
-	QVERIFY(!QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), floatFunc));
-	QVERIFY(QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), noArgsFunc));
-	QVERIFY(!QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), twoArgsFunc));
+	QVERIFY(QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), intFunc));
+	QVERIFY(!QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), floatFunc));
+	QVERIFY(QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), noArgsFunc));
+	QVERIFY(!QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), twoArgsFunc));
 }
 
 void fiveArgFunc(int,bool,float,char,double) {}
@@ -155,10 +155,10 @@ void TestQtCallback::testArgLimit()
 
 void TestQtCallback::testSignalToLambda()
 {
-#ifdef COMPILER_SUPPORTS_LAMBDAS
+#ifdef QST_COMPILER_SUPPORTS_LAMBDAS
 	CallbackTester tester;
 	int sum = 0;
-	QtCallbackProxy::connectCallback(&tester, SIGNAL(aSignal(int)), function<void(int)>(
+	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), function<void(int)>(
 										 [&](int value) { sum += value; }
 	));
 	tester.emitASignal(12);
@@ -172,7 +172,7 @@ void TestQtCallback::testSignalToLambda()
 void TestQtCallback::testSenderDestroyed()
 {
 	QScopedPointer<CallbackTester> tester(new CallbackTester);
-	QtCallbackProxy proxy;
+	QtSignalForwarder proxy;
 	proxy.bind(tester.data(), SIGNAL(aSignal(int)),
 	  noArgsFunc);
 	QCOMPARE(proxy.bindingCount(), 1);
@@ -189,7 +189,7 @@ void TestQtCallback::testSenderDestroyed()
 void TestQtCallback::testUnbind()
 {
 	CallbackTester tester;
-	QtCallbackProxy proxy;
+	QtSignalForwarder proxy;
 	
 	proxy.bind(&tester, SIGNAL(aSignal(int)), noArgsFunc);
 	QCOMPARE(proxy.bindingCount(), 1);
@@ -233,7 +233,7 @@ void TestQtCallback::testConnectPerf()
 		QVector<CallbackTester*> objectList;
 		for (int k=0; k < objCount; k++) {
 			objectList << new CallbackTester;
-			QtCallbackProxy::connectCallback(objectList.last(), SIGNAL(aSignal(int)),
+			QtSignalForwarder::connect(objectList.last(), SIGNAL(aSignal(int)),
 					function<void(int)>(bind(&CallbackTester::addValue, &receiver, 42)));
 			objectList.last()->emitASignal(32);
 		}
@@ -259,7 +259,7 @@ void TestQtCallback::testDelayedCall()
 
 	QElapsedTimer timer;
 	timer.start();
-	QtCallbackProxy::delayedCall(MIN_DELAY, function<void()>(bind(&CallbackTester::addValue, &tester, 42)));
+	QtSignalForwarder::delayedCall(MIN_DELAY, function<void()>(bind(&CallbackTester::addValue, &tester, 42)));
 	loop.exec();
 
 	QVERIFY(timer.elapsed() >= MIN_DELAY);

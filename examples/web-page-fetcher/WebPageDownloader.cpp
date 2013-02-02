@@ -1,6 +1,6 @@
 #include "WebPageDownloader.h"
 
-#include "QtCallbackProxy.h"
+#include "QtSignalForwarder.h"
 
 #include <QtConcurrentRun>
 #include <QtCore/QCoreApplication>
@@ -25,7 +25,7 @@ void PageFetcher::fetchPage(const QUrl& url, const QtCallback1<QByteArray>& call
 	finishedCallback.bind(reply);
 	finishedCallback.bind(callback);
 
-	QtCallbackProxy::connectCallback(reply, SIGNAL(finished()), finishedCallback);
+	QtSignalForwarder::connect(reply, SIGNAL(finished()), finishedCallback);
 }
 
 void PageFetcher::requestFinished(QNetworkReply* reply, const QtCallback1<QByteArray>& callback)
