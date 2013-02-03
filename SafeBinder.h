@@ -56,7 +56,7 @@ template <class Receiver, class MemberFunc>
 class SafeBinder
 {
 	public:
-		typedef typename result_of<MemberFunc()>::type ReturnType;
+		typedef typename result_of<MemberFunc(Receiver)>::type result_type;
 
 		SafeBinder(Receiver receiver, MemberFunc func)
 		: m_receiver(receiver)
@@ -65,12 +65,12 @@ class SafeBinder
 
 #define SAFE_BINDER_CALL_OP(typesExpr, paramExpr, argsExpr) \
 		typesExpr\
-		ReturnType operator()(paramExpr) {\
+		result_type operator()(paramExpr) {\
 			StrongRef<Receiver> strongRef(m_receiver);\
 			if (strongRef.data()) {\
 				return (strongRef.data()->*m_func)(argsExpr);\
 			} else {\
-				return ReturnType();\
+				return result_type();\
 			}\
 		}
 
