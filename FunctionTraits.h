@@ -79,10 +79,11 @@ template <class MemberFunc>
 struct MemberFuncResultType
 {
 #ifdef QST_COMPILER_SUPPORTS_DECLTYPE
-	typedef decltype(std::mem_fn(static_cast<MemberFunc>(0))) MemFnType;
+	typedef decltype(QtSignalTools::mem_fn(static_cast<MemberFunc>(0))) MemFnType;
 #else
-	typedef __typeof__(std::tr1::mem_fn(static_cast<MemberFunc>(0))) MemFnType;
+	typedef __typeof__(QtSignalTools::mem_fn(static_cast<MemberFunc>(0))) MemFnType;
 #endif
 	typedef typename MemFnType::result_type type;
 };
+
 

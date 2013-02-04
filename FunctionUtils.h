@@ -65,12 +65,14 @@ struct enable_if<true,T>
 };
 
 #if defined(QST_USE_CPP11_LIBS)
-using std::is_base_of;
-using std::shared_ptr;
+namespace qst_functional = std;
 #else
-using std::tr1::is_base_of;
-using std::tr1::shared_ptr;
+namespace qst_functional = std::tr1;
 #endif
+
+using qst_functional::is_base_of;
+using qst_functional::mem_fn;
+using qst_functional::shared_ptr;
 
 }
 
