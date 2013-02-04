@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FunctionUtils.h"
+#include "FunctionTraits.h"
 
 #include <QtCore/QDebug>
 #include <QtCore/QSharedPointer>
@@ -56,7 +57,7 @@ template <class Receiver, class MemberFunc>
 class SafeBinder
 {
 	public:
-		typedef typename result_of<MemberFunc(Receiver)>::type result_type;
+		typedef typename MemberFuncResultType<MemberFunc>::type result_type;
 
 		SafeBinder(Receiver receiver, MemberFunc func)
 		: m_receiver(receiver)

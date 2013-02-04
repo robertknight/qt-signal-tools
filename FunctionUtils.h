@@ -5,17 +5,20 @@
 // Visual C++
 #if (_MSC_VER >= 1600)
 #define QST_COMPILER_SUPPORTS_LAMBDAS
+#define QST_COMPILER_SUPPORTS_DECLTYPE
 #endif
 
 // GCC
 #if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 5) && defined(__GXX_EXPERIMENTAL_CXX0X__)
 #define QST_COMPILER_SUPPORTS_LAMBDAS
+#define QST_COMPILER_SUPPORTS_DECLTYPE
 #endif
 
 // Clang
 #if __clang__
 #if __has_feature(cxx_lambdas)
 #define QST_COMPILER_SUPPORTS_LAMBDAS
+#define QST_COMPILER_SUPPORTS_DECLTYPE
 #endif
 #endif
 
@@ -68,10 +71,6 @@ using std::shared_ptr;
 using std::tr1::is_base_of;
 using std::tr1::shared_ptr;
 #endif
-
-// TODO - Use std::result_of instead under
-// C++11
-using std::tr1::result_of;
 
 }
 
