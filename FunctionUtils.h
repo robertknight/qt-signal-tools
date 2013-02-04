@@ -3,22 +3,33 @@
 // tests for relevant C++11 features
 
 // Visual C++
+// See http://blogs.msdn.com/b/vcblog/archive/2011/09/12/10209291.aspx
 #if (_MSC_VER >= 1600)
 #define QST_COMPILER_SUPPORTS_LAMBDAS
 #define QST_COMPILER_SUPPORTS_DECLTYPE
 #endif
 
 // GCC
-#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 5) && defined(__GXX_EXPERIMENTAL_CXX0X__)
-#define QST_COMPILER_SUPPORTS_LAMBDAS
+// See http://gcc.gnu.org/projects/cxx0x.html
+#if (__GNUC__ >= 4) && defined(__GXX_EXPERIMENTAL_CXX0X__)
+#if (__GNUC_MINOR__ >= 3)
 #define QST_COMPILER_SUPPORTS_DECLTYPE
+#define QST_COMPILER_SUPPORTS_VARIADIC_TEMPLATES
+#endif
+#if (__GNUC_MINOR__ >= 5)
+#define QST_COMPILER_SUPPORTS_LAMBDAS
+#endif
 #endif
 
 // Clang
+// See http://clang.llvm.org/docs/LanguageExtensions.html
 #if __clang__
 #if __has_feature(cxx_lambdas)
 #define QST_COMPILER_SUPPORTS_LAMBDAS
 #define QST_COMPILER_SUPPORTS_DECLTYPE
+#endif
+#if __has_feature(cxx_variadic_templates)
+#define QST_COMPILER_SUPPORTS_VARIADIC_TEMPLATES
 #endif
 #endif
 

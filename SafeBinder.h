@@ -75,6 +75,9 @@ class SafeBinder
 			}\
 		}
 
+#ifdef QST_COMPILER_SUPPORTS_VARIADIC_TEMPLATES
+		SAFE_BINDER_CALL_OP(template <typename... Args>, Args... args, args...)
+#else
 		SAFE_BINDER_CALL_OP(,,)
 		SAFE_BINDER_CALL_OP(template <class T1>, const T1& arg1, arg1)
 		SAFE_BINDER_CALL_OP(template <class T1 QST_COMMA class T2>,
@@ -83,6 +86,7 @@ class SafeBinder
 		SAFE_BINDER_CALL_OP(template <class T1 QST_COMMA class T2 QST_COMMA class T3>,
 							const T1& arg1 QST_COMMA const T2& arg2 QST_COMMA const T3& arg3,
 							arg1 QST_COMMA arg2 QST_COMMA arg3);
+#endif
 
 	private:
 		Receiver m_receiver;
