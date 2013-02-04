@@ -1,6 +1,13 @@
 #pragma once
 
 // tests for relevant C++11 features
+//
+// Qt 5 provides all of the compiler feature detection we need
+// in qcompilerdetection.h via Q_COMPILER_XXX macros.
+// 
+// Qt 4 is missing defines for
+// certain compilers (eg. new versions of Clang and VC++) and
+// features.
 
 // Visual C++
 // See http://blogs.msdn.com/b/vcblog/archive/2011/09/12/10209291.aspx
