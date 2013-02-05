@@ -3,6 +3,9 @@
 qt-signal-tools is a collection of utility classes related to signal and slots in Qt.  It includes:
  * QtCallback - Package up a receiver and slot arguments into an object for invoking later.
  * QtSignalForwarder - Connect signals and events from objects to QtCallback or arbitrary functions.
+ * QtMetacallAdapter - Low-level interface for calling a function using a list of QGenericArgument() arguments.
+ * safe_bind() - Create a wrapper around a method call which does nothing and returns a default value if
+  the object is destroyed before the wrapper is called.
 
 ## Requirements
 
