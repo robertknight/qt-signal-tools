@@ -75,12 +75,19 @@ QtSignalForwarder::connect(&editor, SIGNAL(textChanged(QString)), callback);
 editor.setText("Hello World");
 ```
 
-Unlike a regular Qt signal-slot connection, when connecting to an arbitrary function, there is
-no automatic disconnection of the signal when the receiver is destroyed.  As a solution,
-the `safe_bind()` function creates a wrapper around an object and a method call.  When
-this wrapper is called, with the same arguments that would be provided to the method,
-the real method is called if the object if the object still exists or if the object
-has been destroyed, no method is run and a default-value is returned.
+### safe_bind()
+
+Compared to using Qt 4's normal signals and slots, a disadvantage of using `bind()` or `function` to
+create a callback object which can be run later is that there is no automatically disconnection
+if the object is destroyed.
+
+As a solution, the `safe_bind()` function creates a wrapper around an object and a method call.  The
+wrapper can then be called with the same arguments as the wrapped method.  When a call happens,
+either the wrapped method is called with the provided arguments, or if the object has been destroyed,
+nothing happens and a default value is returned.
+
+The wrapper created by `safe_bind()` can be used with `bind()` and `function` and can be used together
+with `QtSignalForwarder` to automatically 'disconnect' if the receiver is destroyed.
 
 ```cpp
 QScopedPointer<QLabel> label(new QLabel);
