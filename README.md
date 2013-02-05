@@ -75,6 +75,31 @@ QtSignalForwarder::connect(&editor, SIGNAL(textChanged(QString)), callback);
 editor.setText("Hello World");
 ```
 
+Unlike a regular Qt signal-slot connection, when connecting to an arbitrary function, there is
+no automatic disconnection of the signal when the receiver is destroyed.  As a solution,
+the `safe_bind()` function creates a wrapper around an object and a method call.  When
+this wrapper is called, with the same arguments that would be provided to the method,
+the real method is called if the object if the object still exists or if the object
+has been destroyed, no method is run and a default-value is returned.
+
+```cpp
+QScopedPointer<QLabel> label(new QLabel);
+
+// create a wrapper around label->setText() which can be run using
+// setTextWrapper(text).
+function<void(QString)> setTextWrapper = safe_bind(label.data(), &QLabel::setText);
+
+// create a wrapper around label->text() which either calls label->text() and returns
+// the same result or returns an empty string if the label has been destroyed
+function<QString()> getTextWrapper = safe_bind(label.data(), &QLabel::text);
+
+setTextWrapper("first update"); // sets the label's text to "first update"
+qDebug() << "label text" << getTextWrapper(); // prints "first update"
+label.reset(); // destroy the label
+setTextWrapper("second update"); // does nothing, as the label has been destroyed
+qDebug() << "label text" << getTextWrapper(); // prints an empty string
+```
+
 ### QtMetacallAdapter
 
 QtMetacallAdapter is a low-level wrapper around a function or function object (eg. `std::function`)
