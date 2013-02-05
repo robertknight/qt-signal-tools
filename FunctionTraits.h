@@ -2,6 +2,9 @@
 
 #include "FunctionUtils.h"
 
+namespace QtSignalTools
+{
+
 // extract the argument count and types
 // from a function signature
 template <class T>
@@ -86,4 +89,5 @@ struct MemberFuncResultType
 	typedef typename MemFnType::result_type type;
 };
 
+}
 

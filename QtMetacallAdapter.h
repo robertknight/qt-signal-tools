@@ -9,6 +9,9 @@
 static const int QTMETACALL_MAX_ARGS = 6;
 typedef int QtMetacallArgsArray[QTMETACALL_MAX_ARGS];
 
+namespace QtSignalTools
+{
+
 // interface for implementations of QtMetacallAdapter
 struct QtMetacallAdapterImplIface : public QSharedData
 {
@@ -154,6 +157,8 @@ QMA_DECLARE_ADAPTER_IMPL(5,
   QMA_ARG_TYPE(0) QMA_COMMA QMA_ARG_TYPE(1) QMA_COMMA QMA_ARG_TYPE(2) QMA_COMMA QMA_ARG_TYPE(3) QMA_COMMA QMA_ARG_TYPE(4)
 )
 
+}
+
 /** A wrapper around either a QtCallback or a function object (eg.
  * std::tr1::function, boost::function, a C++11 lambda)
  * which can invoke the function given an array of QGenericArgument objects.
@@ -165,7 +170,7 @@ public:
 	{}
 
 	QtMetacallAdapter(const QtCallback& callback)
-	: m_impl(new QtCallbackImpl(callback))
+	: m_impl(new QtSignalTools::QtCallbackImpl(callback))
 	{}
 
 	/** Construct a QtMetacallAdapter which invokes a function object
@@ -173,14 +178,14 @@ public:
 	 */
 	template <template <class Signature> class FunctionObject, class Signature>
 	QtMetacallAdapter(const FunctionObject<Signature>& t)
-	: m_impl(new QtMetacallAdapterImpl<FunctionObject<Signature>,FunctionTraits<Signature>::count>(t))
+	: m_impl(new QtSignalTools::QtMetacallAdapterImpl<FunctionObject<Signature>,QtSignalTools::FunctionTraits<Signature>::count>(t))
 	{
 	}
 
 	/** Construct a QtMetacallAdapter which invokes a plain function */
 	template <class Functor>
 	QtMetacallAdapter(Functor f)
-	: m_impl(new QtMetacallAdapterImpl<Functor, FunctionTraits<typename ExtractSignature<Functor>::type>::count>(f))
+	: m_impl(new QtSignalTools::QtMetacallAdapterImpl<Functor, QtSignalTools::FunctionTraits<typename QtSignalTools::ExtractSignature<Functor>::type>::count>(f))
 	{
 	}
 
@@ -203,6 +208,6 @@ public:
 	}
 	
 private:
-	QSharedDataPointer<QtMetacallAdapterImplIface> m_impl;
+	QSharedDataPointer<QtSignalTools::QtMetacallAdapterImplIface> m_impl;
 };
 
