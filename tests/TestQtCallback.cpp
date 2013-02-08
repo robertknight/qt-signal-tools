@@ -261,14 +261,19 @@ void TestQtCallback::testDelayedCall()
 
 	connect(&tester, SIGNAL(valuesChanged()), &loop, SLOT(quit()));
 	
-	const int MIN_DELAY = 25;
+	// on Windows under Qt 4, the timeout occasionally expires
+	// slightly before the specified interval, so here we
+	// only check that there was some delay before
+	// the timeout occurred.
+	const int CALL_DELAY = 50;
+	const int MIN_ACTUAL_DELAY = 25;
 
 	QElapsedTimer timer;
 	timer.start();
-	QtSignalForwarder::delayedCall(MIN_DELAY, function<void()>(bind(&CallbackTester::addValue, &tester, 42)));
+	QtSignalForwarder::delayedCall(CALL_DELAY, function<void()>(bind(&CallbackTester::addValue, &tester, 42)));
 	loop.exec();
 
-	QVERIFY(timer.elapsed() >= MIN_DELAY);
+	QVERIFY(timer.elapsed() >= MIN_ACTUAL_DELAY);
 	QCOMPARE(tester.values, QList<int>() << 42);
 }
 
