@@ -312,4 +312,60 @@ void TestQtCallback::testSafeBinder()
 	QCOMPARE(getTrimmed(), QString());
 }
 
+struct CallCounter
+{
+	CallCounter()
+		: count(0)
+	{}
+
+	int count;
+
+	void increment() {
+		++count;
+	}
+};
+
+function<void()> incrementFunc(CallCounter& counter)
+{
+	return bind(&CallCounter::increment, &counter);
+}
+
+void TestQtCallback::testBindingCount()
+{
+	CallCounter firstSignalCall;
+	CallCounter secondSignalCall;
+
+	CallCounter firstEventCall;
+	CallCounter secondEventCall;
+
+	CallbackTester tester;
+
+	QtSignalForwarder forwarder;
+	forwarder.bind(&tester, SIGNAL(aSignal(int)), incrementFunc(firstSignalCall));
+	forwarder.bind(&tester, SIGNAL(aSignal(int)), incrementFunc(secondSignalCall));
+	QCOMPARE(forwarder.bindingCount(), 2);
+
+	tester.emitASignal(1);
+	QCOMPARE(firstSignalCall.count, 1);
+	QCOMPARE(secondSignalCall.count, 1);
+
+	forwarder.unbind(&tester);
+	QCOMPARE(forwarder.bindingCount(), 0);
+
+	forwarder.bind(&tester, QEvent::Enter, incrementFunc(firstEventCall));
+	forwarder.bind(&tester, QEvent::Leave, incrementFunc(secondEventCall));
+	QCOMPARE(forwarder.bindingCount(), 2);
+
+	QEvent enterEvent(QEvent::Enter);
+	QEvent leaveEvent(QEvent::Leave);
+	QCoreApplication::sendEvent(&tester, &enterEvent);
+	QCoreApplication::sendEvent(&tester, &leaveEvent);
+
+	QCOMPARE(firstEventCall.count, 1);
+	QCOMPARE(secondEventCall.count, 1);
+
+	forwarder.unbind(&tester);
+	QCOMPARE(forwarder.bindingCount(), 0);
+}
+
 QTEST_MAIN(TestQtCallback)

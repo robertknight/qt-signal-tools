@@ -86,13 +86,15 @@ bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetaca
 		return false;
 	}
 
-	if (!QMetaObject::connect(sender, signalIndex, this, targetMethodIndex(), Qt::AutoConnection, 0)) {
-		qWarning() << "Unable to connect signal" << signal << "for" << sender;
-		return false;
+	if (!matchBinding(sender, signalIndex)) {
+		if (!QMetaObject::connect(sender, signalIndex, this, targetMethodIndex(), Qt::AutoConnection, 0)) {
+			qWarning() << "Unable to connect signal" << signal << "for" << sender;
+			return false;
+		}
 	}
 
 	setupDestroyNotify(sender);
-	m_bindings.insert(sender, binding);
+	m_bindings.insertMulti(sender, binding);
 	return true;
 }
 
@@ -107,7 +109,7 @@ bool QtSignalForwarder::bind(QObject* sender, QEvent::Type event, const QtMetaca
 	sender->installEventFilter(this);
 
 	EventBinding binding(sender, event, callback, filter);
-	m_eventBindings.insert(sender, binding);
+	m_eventBindings.insertMulti(sender, binding);
 
 	return true;
 }
@@ -248,16 +250,23 @@ int QtSignalForwarder::qt_metacall(QMetaObject::Call call, int methodId, void** 
 
 	if (call == QMetaObject::InvokeMetaMethod) {
 		if (methodId == 0) {
-			const Binding* binding = matchBinding(sender, signalIndex);
-			if (binding) {
-				const int MAX_ARGS = 10;
-				int argCount = binding->paramTypes.count();
-				QGenericArgument args[MAX_ARGS];
-				for (int i=0; i < argCount; i++) {
-					args[i] = QGenericArgument(binding->paramType(0), arguments[i+1]);
+			bool foundBinding = false;
+			QHash<QObject*,Binding>::const_iterator iter = m_bindings.find(sender);
+			for (;iter != m_bindings.end() && iter.key() == sender;++iter) {
+				const Binding& binding = iter.value();
+				if (binding.sender == sender && binding.signalIndex == signalIndex) {
+					foundBinding = true;
+					const int MAX_ARGS = 10;
+					int argCount = binding.paramTypes.count();
+					QGenericArgument args[MAX_ARGS];
+					for (int i=0; i < argCount; i++) {
+						args[i] = QGenericArgument(binding.paramType(0), arguments[i+1]);
+					}
+					binding.callback.invoke(args, argCount);
 				}
-				binding->callback.invoke(args, argCount);
-			} else if (signalIndex != DESTROYED_SIGNAL_INDEX) {
+			}
+			
+			if (!foundBinding && signalIndex != DESTROYED_SIGNAL_INDEX) {
 				const char* signalName = sender->metaObject()->method(signalIndex).signature();
 				failInvoke(QString("Unable to find matching binding for signal %1").arg(signalName));
 			}

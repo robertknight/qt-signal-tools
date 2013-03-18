@@ -147,6 +147,7 @@ class QtSignalForwarder : public QObject
 			QtMetacallAdapter callback;
 		};
 
+		// returns the first binding for (sender, signalIndex)
 		const Binding* matchBinding(QObject* sender, int signalIndex) const;
 		void failInvoke(const QString& error);
 		void setupDestroyNotify(QObject* sender);
