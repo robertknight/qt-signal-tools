@@ -235,7 +235,15 @@ int QtSignalForwarder::qt_metacall(QMetaObject::Call call, int methodId, void** 
 	// performance note - QObject::sender() and senderSignalIndex()
 	// are linear in the number of connections to this object
 	QObject* sender = this->sender();
+
+#if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
 	int signalIndex = this->senderSignalIndex();
+#else
+	// TODO - We could support older versions of Qt by using one proxy
+	// per (sender,signal) pair rather than one per sender.
+	qWarning() << "QtSignalForwarder requires Qt >= 4.8";
+	int signalIndex = -1;
+#endif
 
 	if (!sender) {
 		failInvoke("Unable to determine sender");

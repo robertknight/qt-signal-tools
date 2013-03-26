@@ -3,8 +3,11 @@
 #include "SafeBinder.h"
 
 #include <QtCore/QDebug>
-#include <QtCore/QElapsedTimer>
 #include <QtCore/QEventLoop>
+
+#if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
+#include <QtCore/QElapsedTimer>
+#endif
 
 #include <iostream>
 
@@ -226,6 +229,7 @@ void TestQtCallback::testUnbind()
 
 void TestQtCallback::testConnectPerf()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
 	QSKIP("Benchmark disabled", SkipAll);
 
 	CallbackTester receiver;
@@ -252,10 +256,12 @@ void TestQtCallback::testConnectPerf()
 
 		objCount *= 2;
 	}
+#endif
 }
 
 void TestQtCallback::testDelayedCall()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
 	CallbackTester tester;
 	QEventLoop loop;
 
@@ -275,6 +281,7 @@ void TestQtCallback::testDelayedCall()
 
 	QVERIFY(timer.elapsed() >= MIN_ACTUAL_DELAY);
 	QCOMPARE(tester.values, QList<int>() << 42);
+#endif
 }
 
 void TestQtCallback::testSafeBinder()

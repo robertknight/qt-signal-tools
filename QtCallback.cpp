@@ -43,7 +43,7 @@ int QtCallbackBase::parameterType(int index) const
 bool QtCallbackBase::isBound(int index) const
 {
 	for (int i=0; i < d->args.count(); i++) {
-		if (d->args.at(i).position == index) {
+		if (d->args[i].position == index) {
 			return true;
 		}
 	}
@@ -98,7 +98,7 @@ void QtCallbackBase::bind(int index, const QVariant& value)
 	Data::Arg newArg;
 	newArg.position = index;
 	newArg.value = value;
-	d->args << newArg;
+	d->args.append(newArg);
 }
 
 void QtCallbackBase::bind(const QVariant& value)
@@ -135,7 +135,7 @@ bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericAr
 	int paramCount = parameterCount();
 	for (int i = 0; i < paramCount; i++) {
 		for (int k = 0; k < d->args.count(); k++) {
-			const Data::Arg& boundArg = d->args.at(k);
+			const Data::Arg& boundArg = d->args[k];
 			if (boundArg.position == i) {
 				// in Qt 4, QMetaMethod only provides access to the type name string.
 				// in Qt 5 we could compare the type IDs instead
