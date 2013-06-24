@@ -169,9 +169,9 @@ class QtSignalForwarder : public QObject
 		QHash<int,Binding> m_signalBindings;
 		QHash<QObject*,EventBinding> m_eventBindings;
 
-		// max ID assigned to a signal binding in
-		// this proxy
-		int m_maxBindingId;
+		// list of available method IDs for new signal
+		// bindings
+		QList<int> m_freeSignalBindingIds;
 
 		// a sentinel callback object for use with the automatically created
 		// bindings to QObject::destroy(QObject*) used to detect when a bound

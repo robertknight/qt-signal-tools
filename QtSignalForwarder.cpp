@@ -9,12 +9,20 @@
 
 // method index of QObject::destroyed(QObject*) signal
 const int DESTROYED_SIGNAL_INDEX = 0;
-// internally method IDs are stored in a 16-bit unsigned int,
-// which sets an upper limit on the number of bindings per proxy
-const int MAX_SIGNAL_BINDING_ID = 10000;
+
+// base ID for method IDs used in signal bindings.
+// These IDs are used by QtSignalForwarder::qt_metacall() to
+// determine which binding to invoke.
+const int BINDING_METHOD_MIN_ID = 1000;
+
+// limit on number of signal bindings per proxy.
+// Internally Qt stores receiver method IDs for signal connections
+// in a 16-bit uint, so there is a constraint that
+// BINDING_METHOD_MIN_ID + MAX_BINDINGS_PER_PROXY <= 2^16
+const int MAX_BINDINGS_PER_PROXY = 10000;
 
 // dummy function for use with the sentinel callback for when
-// an object is destroyed
+// an object is destroyed. It should never actually be called.
 void destroyBindingFunc()
 {
 	Q_ASSERT(false);
@@ -40,7 +48,6 @@ bool isMainThread()
 
 QtSignalForwarder::QtSignalForwarder(QObject* parent)
 	: QObject(parent)
-	, m_maxBindingId(1000)
 {
 }
 
@@ -69,8 +76,7 @@ bool QtSignalForwarder::checkTypeMatch(const QtMetacallAdapter& callback, const 
 
 void QtSignalForwarder::setupDestroyNotify(QObject* sender)
 {
-	if (!m_senderSignalBindingIds.contains(sender) &&
-	    !m_eventBindings.contains(sender)) {
+	if (!m_senderSignalBindingIds.contains(sender)) {
 		bind(sender, SIGNAL(destroyed(QObject*)), s_senderDestroyedCallback);
 	}
 }
@@ -96,7 +102,11 @@ bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetaca
 		return false;
 	}
 
-	int bindingId = m_maxBindingId;
+	if (m_freeSignalBindingIds.isEmpty()) {
+		m_freeSignalBindingIds << BINDING_METHOD_MIN_ID + m_signalBindings.count();
+	}
+	int bindingId = m_freeSignalBindingIds.takeFirst();
+	Q_ASSERT(!m_signalBindings.contains(bindingId));
 
 	// we use Qt::DirectConnection here, so the callback will always be invoked on the same
 	// thread that the signal was delivered.  This ensures that we can rely on the object
@@ -112,13 +122,15 @@ bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetaca
 		return false;
 	}
 
-	++m_maxBindingId;
+	m_signalBindings.insert(bindingId, binding);
 
-	if (signalIndex != DESTROYED_SIGNAL_INDEX) {
+	if (callback != s_senderDestroyedCallback) {
+		// listen for destroyed(QObject*) signal to remove
+		// all bindings.  setupDestroyNotify() in turn calls bind()
+		// with s_senderDestroyedCallback as the callback
 		setupDestroyNotify(sender);
 	}
-
-	m_signalBindings.insert(bindingId, binding);
+	
 	m_senderSignalBindingIds.insertMulti(sender, bindingId);
 
 	return true;
@@ -148,6 +160,7 @@ void QtSignalForwarder::unbind(QObject* sender, const char* signal)
 		Q_ASSERT(m_signalBindings.contains(*iter));
 		const Binding& binding = m_signalBindings.value(*iter);
 		if (binding.signalIndex == signalIndex) {
+			m_freeSignalBindingIds << *iter;
 			m_signalBindings.remove(*iter);
 			iter = m_senderSignalBindingIds.erase(iter);
 		} else {
@@ -181,6 +194,7 @@ void QtSignalForwarder::unbind(QObject* sender)
 {
 	QHash<QObject*,int>::iterator iter = m_senderSignalBindingIds.find(sender);
 	while (iter != m_senderSignalBindingIds.end() && iter.key() == sender) {
+		m_freeSignalBindingIds << *iter;
 		m_signalBindings.remove(*iter);
 		iter = m_senderSignalBindingIds.erase(iter);
 	}
@@ -192,7 +206,7 @@ void QtSignalForwarder::unbind(QObject* sender)
 
 bool QtSignalForwarder::canAddSignalBindings() const
 {
-	return m_maxBindingId <= MAX_SIGNAL_BINDING_ID;
+	return m_signalBindings.count() < MAX_BINDINGS_PER_PROXY;
 }
 
 QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
