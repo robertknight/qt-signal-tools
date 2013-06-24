@@ -198,15 +198,36 @@ public:
 	 */
 	bool invoke(const QGenericArgument* args, int count) const
 	{
+		if (!m_impl) {
+			return false;
+		}
 		return m_impl->invoke(args, count);
 	}
 
 	/** Retrieves the count and types of arguments expected by the receiver */
 	int getArgTypes(QtMetacallArgsArray args) const
 	{
+		if (!m_impl) {
+			return 0;
+		}
 		return m_impl->getArgTypes(args);
 	}
-	
+
+	bool isNull() const
+	{
+		return m_impl.data() == 0;
+	}
+
+	bool operator==(const QtMetacallAdapter& other) const
+	{
+		return m_impl == other.m_impl;
+	}
+
+	bool operator!=(const QtMetacallAdapter& other) const
+	{
+		return m_impl != other.m_impl;
+	}
+
 private:
 	QSharedDataPointer<QtSignalTools::QtMetacallAdapterImplIface> m_impl;
 };

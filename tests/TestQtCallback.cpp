@@ -21,6 +21,19 @@ using namespace std::tr1::placeholders;
 
 using namespace QtSignalTools;
 
+struct CallCounter
+{
+	CallCounter()
+		: count(0)
+	{}
+
+	int count;
+
+	void increment() {
+		++count;
+	}
+};
+
 void TestQtCallback::testInvoke()
 {
 	CallbackTester tester;
@@ -51,14 +64,14 @@ void TestQtCallback::testSignalProxy()
 	QCOMPARE(tester.values, QList<int>());
 	tester.values.clear();
 
-	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
-	  QtCallback(&tester, SLOT(addValue(int))).bind(10));
+	QVERIFY(QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
+	  QtCallback(&tester, SLOT(addValue(int))).bind(10)));
 	tester.emitASignal(11);
 	QCOMPARE(tester.values, QList<int>() << 10);
 	tester.values.clear();
 
-	QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()),
-	  QtCallback(&tester, SLOT(addValue(int))));
+	QVERIFY(!QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()),
+	  QtCallback(&tester, SLOT(addValue(int)))));
 	tester.emitNoArgSignal();
 	QCOMPARE(tester.values, QList<int>());
 }
@@ -227,6 +240,24 @@ void TestQtCallback::testUnbind()
 	QCOMPARE(tester.receiverCount(SIGNAL(destroyed(QObject*))), 0);
 }
 
+void TestQtCallback::testProxyBindingLimits()
+{
+	CallbackTester tester;
+	CallCounter counter;
+
+	int bindingCount = 100000;
+	function<void()> incrementFunc = bind(&CallCounter::increment, &counter);
+	for (int i=0; i < bindingCount; i++) {
+		if (!QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()), incrementFunc)) {
+			// note - we don't use QVERIFY() around the call to QtSignalForwarder::connect() because it
+			// is slow
+			QVERIFY(false);
+		}
+	}
+	tester.emitNoArgSignal();
+	QCOMPARE(counter.count, bindingCount);
+}
+
 void TestQtCallback::testConnectPerf()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
@@ -237,14 +268,17 @@ void TestQtCallback::testConnectPerf()
 	int objCount = 2;
 
 	for (int i = 0; i < 15; i++) {
+		qDebug() << "testing with step" << i;
 		QElapsedTimer timer;
 		timer.start();
 
 		QVector<CallbackTester*> objectList;
 		for (int k=0; k < objCount; k++) {
 			objectList << new CallbackTester;
-			QtSignalForwarder::connect(objectList.last(), SIGNAL(aSignal(int)),
-					function<void(int)>(bind(&CallbackTester::addValue, &receiver, 42)));
+			if (!QtSignalForwarder::connect(objectList.last(), SIGNAL(aSignal(int)),
+					function<void(int)>(bind(&CallbackTester::addValue, &receiver, 42)))) {
+				qWarning() << "Failed to connect signal";
+			}
 			objectList.last()->emitASignal(32);
 		}
 		qDeleteAll(objectList);
@@ -319,19 +353,6 @@ void TestQtCallback::testSafeBinder()
 	QCOMPARE(getTrimmed(), QString());
 }
 
-struct CallCounter
-{
-	CallCounter()
-		: count(0)
-	{}
-
-	int count;
-
-	void increment() {
-		++count;
-	}
-};
-
 function<void()> incrementFunc(CallCounter& counter)
 {
 	return bind(&CallCounter::increment, &counter);
@@ -374,5 +395,21 @@ void TestQtCallback::testBindingCount()
 	forwarder.unbind(&tester);
 	QCOMPARE(forwarder.bindingCount(), 0);
 }
+
+void TestQtCallback::testManySenders()
+{
+	QList<CallbackTester*> senders;
+	QSet<CallbackTester*> receivedSenders;
+	for (int i=0; i < 100; i++) {
+		senders << new CallbackTester;
+		function<void()> insertFunc = bind(&QSet<CallbackTester*>::insert, &receivedSenders, senders.last());
+		QtSignalForwarder::connect(senders.last(), SIGNAL(noArgSignal()), insertFunc);
+	}
+	Q_FOREACH(CallbackTester* sender, senders) {
+		sender->emitNoArgSignal();
+	}
+	QCOMPARE(receivedSenders.count(), senders.count());
+}
+
 
 QTEST_MAIN(TestQtCallback)

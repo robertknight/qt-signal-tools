@@ -1,5 +1,6 @@
 #include "QtSignalForwarder.h"
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
@@ -7,19 +8,17 @@
 
 // method index of QObject::destroyed(QObject*) signal
 const int DESTROYED_SIGNAL_INDEX = 0;
+// internally method IDs are stored in a 16-bit unsigned int,
+// which sets an upper limit on the number of bindings per proxy
+const int MAX_SIGNAL_BINDING_ID = 10000;
 
-struct ProxyMap
+// dummy function for use with the sentinel callback for when
+// an object is destroyed
+void destroyBindingFunc()
 {
-	QHash<QObject*,QtSignalForwarder*> map;
-	QMutex mutex;
-};
-
-Q_GLOBAL_STATIC(ProxyMap, theProxyMap);
-
-static int targetMethodIndex()
-{
-	return QObject::staticMetaObject.methodCount();
+	Q_ASSERT(false);
 }
+QtMetacallAdapter QtSignalForwarder::s_senderDestroyedCallback(destroyBindingFunc);
 
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
@@ -34,6 +33,7 @@ int qtObjectSignalIndex(const QObject* object, const char* signal)
 
 QtSignalForwarder::QtSignalForwarder(QObject* parent)
 	: QObject(parent)
+	, m_maxBindingId(1000)
 {
 }
 
@@ -62,11 +62,9 @@ bool QtSignalForwarder::checkTypeMatch(const QtMetacallAdapter& callback, const 
 
 void QtSignalForwarder::setupDestroyNotify(QObject* sender)
 {
-	if (!m_bindings.contains(sender) &&
-	    !m_eventBindings.contains(sender))
-	{
-		QMetaObject::connect(sender, DESTROYED_SIGNAL_INDEX,
-		  this, targetMethodIndex(), Qt::AutoConnection, 0);
+	if (!m_senderSignalBindingIds.contains(sender) &&
+	    !m_eventBindings.contains(sender)) {
+		bind(sender, SIGNAL(destroyed(QObject*)), s_senderDestroyedCallback);
 	}
 }
 
@@ -86,15 +84,36 @@ bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetaca
 		return false;
 	}
 
-	if (!matchBinding(sender, signalIndex)) {
-		if (!QMetaObject::connect(sender, signalIndex, this, targetMethodIndex(), Qt::AutoConnection, 0)) {
-			qWarning() << "Unable to connect signal" << signal << "for" << sender;
-			return false;
-		}
+	if (!canAddSignalBindings()) {
+		qWarning() << "Limit of bindings per proxy has been reached";
+		return false;
 	}
 
-	setupDestroyNotify(sender);
-	m_bindings.insertMulti(sender, binding);
+	int bindingId = m_maxBindingId;
+
+	// we use Qt::DirectConnection here, so the callback will always be invoked on the same
+	// thread that the signal was delivered.  This ensures that we can rely on the object
+	// still existing in the qt_metacall() implementation.  This also means that we don't
+	// retain any QObject* pointers in the internal maps once the destroyed(QObject*) signal
+	// has been emitted.
+	//
+	// If the binding's callback uses QtCallback, that will use a queued connection if the receiver
+	// actually lives in a different thread.
+	//
+	if (!QMetaObject::connect(sender, signalIndex, this, bindingId, Qt::DirectConnection, 0)) {
+		qWarning() << "Unable to connect signal" << signal << "for" << sender;
+		return false;
+	}
+
+	++m_maxBindingId;
+
+	if (signalIndex != DESTROYED_SIGNAL_INDEX) {
+		setupDestroyNotify(sender);
+	}
+
+	m_signalBindings.insert(bindingId, binding);
+	m_senderSignalBindingIds.insertMulti(sender, bindingId);
+
 	return true;
 }
 
@@ -117,15 +136,18 @@ bool QtSignalForwarder::bind(QObject* sender, QEvent::Type event, const QtMetaca
 void QtSignalForwarder::unbind(QObject* sender, const char* signal)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
-	QHash<QObject*,Binding>::iterator iter = m_bindings.find(sender);
-	while (iter != m_bindings.end() && iter.key() == sender) {
-		if (iter->signalIndex == signalIndex) {
-			QMetaObject::disconnect(sender, signalIndex, this, targetMethodIndex());
-			iter = m_bindings.erase(iter);
+	QHash<QObject*,int>::iterator iter = m_senderSignalBindingIds.find(sender);
+	while (iter != m_senderSignalBindingIds.end() && iter.key() == sender) {
+		Q_ASSERT(m_signalBindings.contains(*iter));
+		const Binding& binding = m_signalBindings.value(*iter);
+		if (binding.signalIndex == signalIndex) {
+			m_signalBindings.remove(*iter);
+			iter = m_senderSignalBindingIds.erase(iter);
 		} else {
 			++iter;
 		}
 	}
+
 	if (!isConnected(sender)) {
 		// disconnect destruction notifications
 		unbind(sender);
@@ -150,79 +172,63 @@ void QtSignalForwarder::unbind(QObject* sender, QEvent::Type event)
 
 void QtSignalForwarder::unbind(QObject* sender)
 {
-	m_bindings.remove(sender);
+	QHash<QObject*,int>::iterator iter = m_senderSignalBindingIds.find(sender);
+	while (iter != m_senderSignalBindingIds.end() && iter.key() == sender) {
+		m_signalBindings.remove(*iter);
+		iter = m_senderSignalBindingIds.erase(iter);
+	}
 	m_eventBindings.remove(sender);
 
 	sender->removeEventFilter(this);
 	disconnect(sender, 0, this, 0);
-
-	if (installProxy(sender) == this) {
-		removeProxy(sender);
-	}
 }
 
-QtSignalForwarder* QtSignalForwarder::installProxy(QObject* sender)
+bool QtSignalForwarder::canAddSignalBindings() const
 {
-	// We currently create one proxy object per sender.
-	//
-	// The upside is that some operations are cheaper as within QObject's
-	// internals, there are methods which are linear in the number of connected
-	// senders (eg. sender(), senderSignalIndex())
-	//
-	// The downside of having more proxy objects is the cost per instance
-	// and the time required to instantiate a proxy object the first time
-	// a callback is installed for a given sender
-	// 
-	QtSignalForwarder* proxy = 0;
-	{
-		QMutexLocker lock(&theProxyMap()->mutex);
-		proxy = theProxyMap()->map.value(sender);
-	}
-
-	if (!proxy) {
-		proxy = new QtSignalForwarder(sender);
-		QMutexLocker lock(&theProxyMap()->mutex);
-		theProxyMap()->map.insert(sender,proxy);
-	}
-	return proxy;
+	return m_maxBindingId <= MAX_SIGNAL_BINDING_ID;
 }
 
-void QtSignalForwarder::removeProxy(QObject* sender)
+QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 {
-	QMutexLocker lock(&theProxyMap()->mutex);
-	theProxyMap()->map.remove(sender);
+	Q_UNUSED(sender);
+
+	// We try to use a small number of shared proxy objects to minimize
+	// the overhead of each binding.
+	//
+	// There are some issues to consider when re-using proxies however:
+	//
+	// - Some operations in QObject's internals are linear in the number of
+	//   connected senders, eg. sender(), senderSignalIndex()
+	// - There is a limit on the number of signal bindings for any given proxy
+	// - When using Qt::AutoConnection to connect the sender and receiver, the
+	//   delivery method depends on the sender/receiver threads
+	//
+	static QList<QtSignalForwarder*> proxies;
+	if (proxies.isEmpty() || !proxies.last()->canAddSignalBindings()) {
+		QtSignalForwarder* newProxy = new QtSignalForwarder(QCoreApplication::instance());
+		proxies << newProxy;
+	}
+	return proxies.last();
 }
 
 bool QtSignalForwarder::connect(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
 {
-	return installProxy(sender)->bind(sender, signal, callback);
+	return sharedProxy(sender)->bind(sender, signal, callback);
 }
 
 void QtSignalForwarder::disconnect(QObject* sender, const char* signal)
 {
-	installProxy(sender)->unbind(sender, signal);
+	sharedProxy(sender)->unbind(sender, signal);
 }
 
 bool QtSignalForwarder::connect(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter)
 {
-	return installProxy(sender)->bind(sender, event, callback, filter);
+	return sharedProxy(sender)->bind(sender, event, callback, filter);
 }
 
 void QtSignalForwarder::disconnect(QObject* sender, QEvent::Type event)
 {
-	installProxy(sender)->unbind(sender, event);
-}
-
-const QtSignalForwarder::Binding* QtSignalForwarder::matchBinding(QObject* sender, int signalIndex) const
-{
-	QHash<QObject*,Binding>::const_iterator iter = m_bindings.find(sender);
-	for (;iter != m_bindings.end() && iter.key() == sender;++iter) {
-		const Binding& binding = iter.value();
-		if (binding.sender == sender && binding.signalIndex == signalIndex) {
-			return &binding;
-		}
-	}
-	return 0;
+	sharedProxy(sender)->unbind(sender, event);
 }
 
 void QtSignalForwarder::failInvoke(const QString& error)
@@ -230,63 +236,37 @@ void QtSignalForwarder::failInvoke(const QString& error)
 	qWarning() << "Failed to invoke callback" << error;
 }
 
+void QtSignalForwarder::invokeBinding(const Binding& binding, void** arguments)
+{
+	const int MAX_ARGS = 10;
+	int argCount = binding.paramTypes.count();
+	QGenericArgument args[MAX_ARGS];
+	for (int i=0; i < argCount; i++) {
+		args[i] = QGenericArgument(binding.paramType(0), arguments[i+1]);
+	}
+	binding.callback.invoke(args, argCount);
+}
+
 int QtSignalForwarder::qt_metacall(QMetaObject::Call call, int methodId, void** arguments)
 {
-	// performance note - QObject::sender() and senderSignalIndex()
-	// are linear in the number of connections to this object
-	QObject* sender = this->sender();
-
-#if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
-	int signalIndex = this->senderSignalIndex();
-#else
-	// TODO - We could support older versions of Qt by using one proxy
-	// per (sender,signal) pair rather than one per sender.
-	qWarning() << "QtSignalForwarder requires Qt >= 4.8";
-	int signalIndex = -1;
-#endif
-
-	if (!sender) {
-		failInvoke("Unable to determine sender");
-	} else if (signalIndex < 0) {
-		failInvoke("Unable to determine sender signal");
-	}	
-
-	methodId = QObject::qt_metacall(call, methodId, arguments);
-	if (methodId < 0) {
-		return methodId;
-	}
-
+	// note: Avoid using sender() and senderSignalIndex() in this method as:
+	// - The cost is linear in the number of connected senders
+	// - Both functions involve a mutex lock on the sender
+	// - The functions do not work for queued signals
+	
 	if (call == QMetaObject::InvokeMetaMethod) {
-		if (methodId == 0) {
-			bool foundBinding = false;
-			QHash<QObject*,Binding>::const_iterator iter = m_bindings.find(sender);
-			for (;iter != m_bindings.end() && iter.key() == sender;++iter) {
-				const Binding& binding = iter.value();
-				if (binding.sender == sender && binding.signalIndex == signalIndex) {
-					foundBinding = true;
-					const int MAX_ARGS = 10;
-					int argCount = binding.paramTypes.count();
-					QGenericArgument args[MAX_ARGS];
-					for (int i=0; i < argCount; i++) {
-						args[i] = QGenericArgument(binding.paramType(0), arguments[i+1]);
-					}
-					binding.callback.invoke(args, argCount);
-				}
+		QHash<int,Binding>::const_iterator iter = m_signalBindings.find(methodId);
+		if (iter != m_signalBindings.end()) {
+			if (iter->callback == s_senderDestroyedCallback) {
+				unbind(iter->sender);
+			} else {
+				invokeBinding(*iter, arguments);
 			}
-			
-			if (!foundBinding && signalIndex != DESTROYED_SIGNAL_INDEX) {
-				const char* signalName = sender->metaObject()->method(signalIndex).signature();
-				failInvoke(QString("Unable to find matching binding for signal %1").arg(signalName));
-			}
+		} else {
+			failInvoke(QString("Unable to find matching binding for signal %1").arg(methodId));
 		}
-		--methodId;
 	}
-
-	if (signalIndex == DESTROYED_SIGNAL_INDEX) {
-		unbind(sender);
-	}
-
-	return methodId;
+	return -1;
 }
 
 bool QtSignalForwarder::eventFilter(QObject* watched, QEvent* event)
@@ -304,12 +284,28 @@ bool QtSignalForwarder::eventFilter(QObject* watched, QEvent* event)
 
 int QtSignalForwarder::bindingCount() const
 {
-	return m_bindings.size() + m_eventBindings.size();
+	int totalSignalBindings = 0;
+	Q_FOREACH(const Binding& binding, m_signalBindings) {
+		if (binding.callback != s_senderDestroyedCallback) {
+			++totalSignalBindings;
+		}
+	}
+	return totalSignalBindings + m_eventBindings.size();
 }
 
 bool QtSignalForwarder::isConnected(QObject* sender) const
 {
-	return m_bindings.contains(sender) || m_eventBindings.contains(sender);
+	QHash<QObject*,int>::const_iterator signalBindingIter = m_senderSignalBindingIds.find(sender);
+	while (signalBindingIter != m_senderSignalBindingIds.end() &&
+	       signalBindingIter.key() == sender) {
+		Q_ASSERT(m_signalBindings.contains(*signalBindingIter));
+		const Binding& binding = m_signalBindings.value(*signalBindingIter);
+		if (binding.callback != s_senderDestroyedCallback) {
+			return true;
+		}
+		++signalBindingIter;
+	}
+	return m_eventBindings.contains(sender);
 }
 
 void QtSignalForwarder::delayedCall(int ms, const QtMetacallAdapter& adapter)

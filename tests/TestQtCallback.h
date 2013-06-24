@@ -23,6 +23,8 @@ class TestQtCallback : public QObject
 		void testDelayedCall();
 		void testSafeBinder();
 		void testBindingCount();
+		void testManySenders();
+		void testProxyBindingLimits();
 
 		void testConnectPerf();
 };

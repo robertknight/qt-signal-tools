@@ -152,12 +152,28 @@ class QtSignalForwarder : public QObject
 		void failInvoke(const QString& error);
 		void setupDestroyNotify(QObject* sender);
 
-		static bool checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes);
-		static QtSignalForwarder* installProxy(QObject* sender);
-		static void removeProxy(QObject* sender);
+		// returns false if the limit on the number of signal bindings
+		// per proxy has been reached
+		bool canAddSignalBindings() const;
 
-		QHash<QObject*,Binding> m_bindings;
+		static bool checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes);
+		static QtSignalForwarder* sharedProxy(QObject* sender);
+		static void invokeBinding(const Binding& binding, void** arguments);
+
+		// map of sender -> signal binding IDs
+		QHash<QObject*,int> m_senderSignalBindingIds;
+		// map of binding ID -> binding
+		QHash<int,Binding> m_signalBindings;
 		QHash<QObject*,EventBinding> m_eventBindings;
+
+		// max ID assigned to a signal binding in
+		// this proxy
+		int m_maxBindingId;
+
+		// a sentinel callback object for use with the automatically created
+		// bindings to QObject::destroy(QObject*) used to detect when a bound
+		// sender is destroyed
+		static QtMetacallAdapter s_senderDestroyedCallback;
 };
 
 Q_DECLARE_METATYPE(QtSignalForwarder*)
