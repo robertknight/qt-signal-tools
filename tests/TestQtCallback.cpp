@@ -419,5 +419,15 @@ void TestQtCallback::testManySenders()
 	QCOMPARE(receivedSenders.count(), senders.count());
 }
 
+void TestQtCallback::testConnectWithSender()
+{
+	qRegisterMetaType<CallbackTester*>("CallbackTester*");
+
+	CallbackTester sender;
+	QtSignalForwarder::connectWithSender(&sender, SIGNAL(aSignal(int)),
+	  &sender, SLOT(addValueIfSenderIsSelf(CallbackTester*,int)));
+	sender.emitASignal(34);
+	QCOMPARE(sender.values, QList<int>() << 34);
+}
 
 QTEST_MAIN(TestQtCallback)

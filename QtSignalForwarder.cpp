@@ -349,4 +349,15 @@ void QtSignalForwarder::delayedCall(int ms, const QtMetacallAdapter& adapter)
 	timer->start();
 }
 
+bool QtSignalForwarder::connectWithSender(QObject* sender, const char* signal, QObject* receiver, const char* slot)
+{
+	QtCallback callback(receiver, slot);
+	int senderType = callback.parameterType(0);
+	if (senderType == 0) {
+		qWarning() << "Sender type for first argument of" << slot << "has not been registered with qRegisterMetaType<T>()";
+		return false;
+	}
+	callback.bind(0, QVariant(senderType, &sender));
+	return connect(sender, signal, callback);
+}
 

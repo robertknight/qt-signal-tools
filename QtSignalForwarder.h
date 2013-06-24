@@ -108,6 +108,17 @@ class QtSignalForwarder : public QObject
 		static bool connect(QObject* sender, QEvent::Type event, const QtMetacallAdapter& callback, EventFilterFunc filter = 0);
 		static void disconnect(QObject* sender, QEvent::Type event);
 
+		/** Convenience method which connects a signal to a slot which takes a pointer
+		 * to the sender as the first argument. This can be used as an alternative to explicitly checking
+		 * the sender in the slot itself or using QSignalMapper.
+		 *
+		 * In the current implementation, the receiver type must be registered using
+		 * qRegisterMetaType<T>().
+		 *
+		 * For example: connectWithSender(myButton, SIGNAL(clicked()), myForm, SLOT(buttonClicked(QPushButton*)))
+		 */
+		static bool connectWithSender(QObject* sender, const char* signal, QObject* receiver, const char* slot);
+
 		// re-implemented from QObject
 		virtual bool eventFilter(QObject* watched, QEvent* event);
 

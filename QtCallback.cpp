@@ -69,7 +69,7 @@ int QtCallbackBase::unboundParameterType(int index) const
 	for (int i=0; i < count; i++) {
 		if (!isBound(i)) {
 			if (unboundCount == index) {
-				return parameterType(index);
+				return parameterType(i);
 			}
 			++unboundCount;
 		}
@@ -86,6 +86,7 @@ void QtCallbackBase::bind(int index, const QVariant& value)
 {
 	Q_ASSERT_X(index < parameterCount(), Q_FUNC_INFO, "Argument index is out of range");
 	Q_ASSERT_X(parameterType(index) == value.userType(), Q_FUNC_INFO, "Argument type is incorrect");
+	Q_ASSERT_X(value.userType() != 0, Q_FUNC_INFO, "Argument type is unknown");
 
 	for (int i=0; i < d->args.count(); i++)
 	{
@@ -109,6 +110,7 @@ void QtCallbackBase::bind(const QVariant& value)
 			++minUnusedArg;
 		}
 	}
+	qDebug() << "binding arg" << 0 << "with" << value;
 	Q_ASSERT_X(minUnusedArg < parameterCount(), Q_FUNC_INFO, "More parameters have been bound to the callback that the connected method accepts");
 	bind(minUnusedArg, value);
 }

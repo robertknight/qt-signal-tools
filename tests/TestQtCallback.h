@@ -25,6 +25,7 @@ class TestQtCallback : public QObject
 		void testBindingCount();
 		void testManySenders();
 		void testProxyBindingLimits();
+		void testConnectWithSender();
 
 		void testConnectPerf();
 };
@@ -62,6 +63,13 @@ class CallbackTester : public QObject
 		{
 			values << value;
 			emit valuesChanged();
+		}
+
+		void addValueIfSenderIsSelf(CallbackTester* sender, int value)
+		{
+			if (sender == this) {
+				addValue(value);
+			}
 		}
 
 	Q_SIGNALS:
