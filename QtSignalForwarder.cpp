@@ -10,7 +10,8 @@
 // method index of QObject::destroyed(QObject*) signal
 const int DESTROYED_SIGNAL_INDEX = 0;
 
-// base ID for method IDs used in signal bindings.
+// minimum ID for method IDs used in signal bindings.
+//
 // These IDs are used by QtSignalForwarder::qt_metacall() to
 // determine which binding to invoke.
 const int BINDING_METHOD_MIN_ID = 1000;
@@ -274,12 +275,14 @@ void QtSignalForwarder::invokeBinding(const Binding& binding, void** arguments)
 
 int QtSignalForwarder::qt_metacall(QMetaObject::Call call, int methodId, void** arguments)
 {
-	// note: Avoid using sender() and senderSignalIndex() in this method as:
-	// - The cost is linear in the number of connected senders
-	// - Both functions involve a mutex lock on the sender
-	// - The functions do not work for queued signals
-	
-	if (call == QMetaObject::InvokeMetaMethod) {
+	if (methodId >= BINDING_METHOD_MIN_ID && call == QMetaObject::InvokeMetaMethod) {
+		// signal binding invocation
+		//
+		// note: Avoid using sender() and senderSignalIndex() here as:
+		// - The cost is linear in the number of connected senders
+		// - Both functions involve a mutex lock on the sender
+		// - The functions do not work for queued signals
+		//
 		QHash<int,Binding>::const_iterator iter = m_signalBindings.find(methodId);
 		if (iter != m_signalBindings.end()) {
 			if (iter->callback == s_senderDestroyedCallback) {
@@ -290,8 +293,11 @@ int QtSignalForwarder::qt_metacall(QMetaObject::Call call, int methodId, void** 
 		} else {
 			failInvoke(QString("Unable to find matching binding for signal %1").arg(methodId));
 		}
+		return -1;
+	} else {
+		// standard qt_metacall() implementation
+		return QObject::qt_metacall(call, methodId, arguments);
 	}
-	return -1;
 }
 
 bool QtSignalForwarder::eventFilter(QObject* watched, QEvent* event)
