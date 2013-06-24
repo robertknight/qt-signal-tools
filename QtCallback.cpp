@@ -165,7 +165,11 @@ bool QtCallbackBase::invokeWithArgs(const QGenericArgument& a1, const QGenericAr
 	}
 
 	if (!d->method.invoke(d->receiver.data(), args[0], args[1], args[2], args[3], args[4], args[5], args[6])) {
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+		qWarning() << "Failed to invoke method" << d->method.methodSignature();
+#else
 		qWarning() << "Failed to invoke method" << d->method.signature();
+#endif
 		return false;
 	}
 	return true;

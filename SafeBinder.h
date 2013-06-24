@@ -4,6 +4,7 @@
 #include "FunctionTraits.h"
 
 #include <QtCore/QDebug>
+#include <QtCore/QPointer>
 #include <QtCore/QSharedPointer>
 
 namespace QtSignalTools
@@ -30,12 +31,35 @@ struct StrongRef<QWeakPointer<T> >
 		if (m_strongRef) {
 			return m_strongRef.data();
 		} else {
+			// this may either be a QWeakPointer constructed
+			// from a QObject* which is not tracked by a QSharedPointer or
+			// the object may have been deleted, in which case data() will
+			// return 0
 			return m_weakRef.data();
 		}
 	}
 
 	QSharedPointer<T> m_strongRef;
 	QWeakPointer<T> m_weakRef;
+};
+
+// version for QPointer<T>.
+template <class T>
+struct StrongRef<QPointer<T> >
+{
+	StrongRef(QPointer<T>& ref)
+		: m_ref(ref)
+	{
+		// There is no way to actually promote QPointer<T> to
+		// a strong reference, so we can't do that here as
+		// we do for other StrongRef implementations
+	}
+
+	T* data() const {
+		return m_ref.data();
+	}
+
+	QPointer<T> m_ref;
 };
 
 // version for weak_ptr<T>
@@ -127,12 +151,24 @@ SafeBinder<WeakPointer<T>,MemberFunc> safe_bind(const WeakPointer<T>& r, MemberF
 	return SafeBinder<WeakPointer<T>,MemberFunc>(r,f);
 }
 
+// Under Qt 4 QWeakPointer is the most efficient weak reference
+// to QObject.  Under Qt 5, QWeakPointer no longer integrates with
+// QObject but QPointer was instead re-written to be more efficient
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+template <class T, class MemberFunc>
+SafeBinder<QPointer<T>,MemberFunc> safe_bind(T* r, MemberFunc f,
+  typename enable_if<is_base_of<QObject,T>::value,T>::type* = 0)
+{
+	return SafeBinder<QPointer<T>,MemberFunc>(r,f);
+}
+#else
 template <class T, class MemberFunc>
 SafeBinder<QWeakPointer<T>,MemberFunc> safe_bind(T* r, MemberFunc f,
   typename enable_if<is_base_of<QObject,T>::value,T>::type* = 0)
 {
 	return SafeBinder<QWeakPointer<T>,MemberFunc>(r,f);
 }
+#endif
 
 }
 

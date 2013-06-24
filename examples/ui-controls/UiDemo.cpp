@@ -1,11 +1,11 @@
 #include "QtSignalForwarder.h"
 
-#include <QtGui/QApplication>
-#include <QtGui/QLabel>
-#include <QtGui/QMouseEvent>
-#include <QtGui/QPushButton>
-#include <QtGui/QVBoxLayout>
-#include <QtGui/QSlider>
+#include <QApplication>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QPushButton>
+#include <QSlider>
+#include <QVBoxLayout>
 
 bool matchRightClick(QObject*, QEvent* event)
 {

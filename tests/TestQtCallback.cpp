@@ -11,6 +11,12 @@
 
 #include <iostream>
 
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+#define SKIP_TEST(message) QSKIP(message)
+#else
+#define SKIP_TEST(message) QSKIP(message, SkipAll)
+#endif
+
 #if defined(QST_USE_CPP11_LIBS)
 using namespace std;
 using namespace std::placeholders;
@@ -187,7 +193,7 @@ void TestQtCallback::testSignalToLambda()
 	tester.emitASignal(7);
 	QCOMPARE(sum, 19);
 #else
-	QSKIP("Compiler does not support C++11 lambdas", SkipAll);
+	SKIP_TEST("Compiler does not support C++11 lambdas");
 #endif
 }
 
@@ -261,7 +267,7 @@ void TestQtCallback::testProxyBindingLimits()
 void TestQtCallback::testConnectPerf()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
-	QSKIP("Benchmark disabled", SkipAll);
+	SKIP_TEST("Benchmark disabled");
 
 	CallbackTester receiver;
 
