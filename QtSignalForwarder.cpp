@@ -4,6 +4,7 @@
 #include <QtCore/QDebug>
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QThread>
 #include <QtCore/QTimer>
 
 // method index of QObject::destroyed(QObject*) signal
@@ -29,6 +30,12 @@ int qtObjectSignalIndex(const QObject* object, const char* signal)
 		signalIndex = metaObject->indexOfMethod(normalizedSignature.constData());
 	}
 	return signalIndex;
+}
+
+// returns true if called on the main app thread
+bool isMainThread()
+{
+	return QThread::currentThread() == QCoreApplication::instance()->thread();
 }
 
 QtSignalForwarder::QtSignalForwarder(QObject* parent)
@@ -190,6 +197,10 @@ bool QtSignalForwarder::canAddSignalBindings() const
 
 QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 {
+	// QtSignalForwarder methods are currently not thread-safe, so
+	// use of shared proxies is restricted to the main thread.
+	Q_ASSERT(isMainThread());
+
 	Q_UNUSED(sender);
 
 	// We try to use a small number of shared proxy objects to minimize
