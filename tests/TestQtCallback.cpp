@@ -398,11 +398,13 @@ void TestQtCallback::testBindingCount()
 
 void TestQtCallback::testManySenders()
 {
+	typedef QSet<CallbackTester*>::const_iterator SetIter;
+
 	QList<CallbackTester*> senders;
 	QSet<CallbackTester*> receivedSenders;
 	for (int i=0; i < 100; i++) {
 		senders << new CallbackTester;
-		function<void()> insertFunc = bind(&QSet<CallbackTester*>::insert, &receivedSenders, senders.last());
+		function<SetIter()> insertFunc = bind(&QSet<CallbackTester*>::insert, &receivedSenders, senders.last());
 		QtSignalForwarder::connect(senders.last(), SIGNAL(noArgSignal()), insertFunc);
 	}
 	Q_FOREACH(CallbackTester* sender, senders) {
