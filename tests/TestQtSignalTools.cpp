@@ -1,4 +1,4 @@
-#include "TestQtCallback.h"
+#include "TestQtSignalTools.h"
 
 #include "SafeBinder.h"
 
@@ -40,7 +40,7 @@ struct CallCounter
 	}
 };
 
-void TestQtCallback::testInvoke()
+void TestQtSignalTools::testInvoke()
 {
 	CallbackTester tester;
 	QtCallback callback1(&tester, SLOT(addValue(int)));
@@ -54,7 +54,7 @@ void TestQtCallback::testInvoke()
 	QCOMPARE(tester.values, QList<int>() << 27);
 }
 
-void TestQtCallback::testSignalProxy()
+void TestQtSignalTools::testSignalProxy()
 {
 	CallbackTester tester;
 	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
@@ -82,7 +82,7 @@ void TestQtCallback::testSignalProxy()
 	QCOMPARE(tester.values, QList<int>());
 }
 
-void TestQtCallback::testEventProxy()
+void TestQtSignalTools::testEventProxy()
 {
 	CallbackTester tester;
 	QtSignalForwarder::connect(&tester, QEvent::MouseButtonPress,
@@ -97,7 +97,7 @@ void TestQtCallback::testEventProxy()
 	QCOMPARE(tester.values, QList<int>());
 }
 
-void TestQtCallback::testSignalToFunctionObject()
+void TestQtSignalTools::testSignalToFunctionObject()
 {
 	CallbackTester tester;
 	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)),
@@ -132,7 +132,7 @@ int sumInputs(int value)
 	return total;
 }
 
-void TestQtCallback::testSignalToPlainFunc()
+void TestQtSignalTools::testSignalToPlainFunc()
 {
 	CallbackTester tester;
 	QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), sumInputs);
@@ -141,7 +141,7 @@ void TestQtCallback::testSignalToPlainFunc()
 	QCOMPARE(sumInputs(0), 13);
 }
 
-void TestQtCallback::testArgCast()
+void TestQtSignalTools::testArgCast()
 {
 	// use function and bind() to perform a cast of the argument
 	// when it is emitted.
@@ -158,7 +158,7 @@ void intFunc(int) {}
 void noArgsFunc() {}
 void twoArgsFunc(int,int) {}
 
-void TestQtCallback::testArgTypeCheck()
+void TestQtSignalTools::testArgTypeCheck()
 {
 	CallbackTester tester;
 	QVERIFY(QtSignalForwarder::connect(&tester, SIGNAL(aSignal(int)), intFunc));
@@ -169,7 +169,7 @@ void TestQtCallback::testArgTypeCheck()
 
 void fiveArgFunc(int,bool,float,char,double) {}
 
-void TestQtCallback::testArgLimit()
+void TestQtSignalTools::testArgLimit()
 {
 	QtMetacallAdapter adapter(fiveArgFunc);
 	QtMetacallArgsArray args = {-1};
@@ -181,7 +181,7 @@ void TestQtCallback::testArgLimit()
 	QCOMPARE(argList, QStringList() << "int" << "bool" << "float" << "char" << "double");
 }
 
-void TestQtCallback::testSignalToLambda()
+void TestQtSignalTools::testSignalToLambda()
 {
 #ifdef QST_COMPILER_SUPPORTS_LAMBDAS
 	CallbackTester tester;
@@ -197,7 +197,7 @@ void TestQtCallback::testSignalToLambda()
 #endif
 }
 
-void TestQtCallback::testSenderDestroyed()
+void TestQtSignalTools::testSenderDestroyed()
 {
 	QScopedPointer<CallbackTester> tester(new CallbackTester);
 	QtSignalForwarder proxy;
@@ -214,7 +214,7 @@ void TestQtCallback::testSenderDestroyed()
 	QCOMPARE(proxy.bindingCount(), 0);
 }
 
-void TestQtCallback::testUnbind()
+void TestQtSignalTools::testUnbind()
 {
 	CallbackTester tester;
 	QtSignalForwarder proxy;
@@ -246,7 +246,7 @@ void TestQtCallback::testUnbind()
 	QCOMPARE(tester.receiverCount(SIGNAL(destroyed(QObject*))), 0);
 }
 
-void TestQtCallback::testProxyBindingLimits()
+void TestQtSignalTools::testProxyBindingLimits()
 {
 	CallbackTester tester;
 	CallCounter counter;
@@ -264,7 +264,7 @@ void TestQtCallback::testProxyBindingLimits()
 	QCOMPARE(counter.count, bindingCount);
 }
 
-void TestQtCallback::testConnectPerf()
+void TestQtSignalTools::testConnectPerf()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
 	SKIP_TEST("Benchmark disabled");
@@ -299,7 +299,7 @@ void TestQtCallback::testConnectPerf()
 #endif
 }
 
-void TestQtCallback::testDelayedCall()
+void TestQtSignalTools::testDelayedCall()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(4,8,0)
 	CallbackTester tester;
@@ -324,7 +324,7 @@ void TestQtCallback::testDelayedCall()
 #endif
 }
 
-void TestQtCallback::testSafeBinder()
+void TestQtSignalTools::testSafeBinder()
 {
 	// test with a QObject
 	QObject* object = new QObject;
@@ -364,7 +364,7 @@ function<void()> incrementFunc(CallCounter& counter)
 	return bind(&CallCounter::increment, &counter);
 }
 
-void TestQtCallback::testBindingCount()
+void TestQtSignalTools::testBindingCount()
 {
 	CallCounter firstSignalCall;
 	CallCounter secondSignalCall;
@@ -402,7 +402,7 @@ void TestQtCallback::testBindingCount()
 	QCOMPARE(forwarder.bindingCount(), 0);
 }
 
-void TestQtCallback::testManySenders()
+void TestQtSignalTools::testManySenders()
 {
 	typedef QSet<CallbackTester*>::const_iterator SetIter;
 
@@ -419,7 +419,7 @@ void TestQtCallback::testManySenders()
 	QCOMPARE(receivedSenders.count(), senders.count());
 }
 
-void TestQtCallback::testConnectWithSender()
+void TestQtSignalTools::testConnectWithSender()
 {
 	qRegisterMetaType<CallbackTester*>("CallbackTester*");
 
@@ -430,4 +430,4 @@ void TestQtCallback::testConnectWithSender()
 	QCOMPARE(sender.values, QList<int>() << 34);
 }
 
-QTEST_MAIN(TestQtCallback)
+QTEST_MAIN(TestQtSignalTools)

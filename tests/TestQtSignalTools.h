@@ -4,7 +4,7 @@
 #include "QtSignalForwarder.h"
 #include "FunctionUtils.h"
 
-class TestQtCallback : public QObject
+class TestQtSignalTools : public QObject
 {
 	Q_OBJECT
 
