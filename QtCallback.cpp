@@ -110,7 +110,6 @@ void QtCallbackBase::bind(const QVariant& value)
 			++minUnusedArg;
 		}
 	}
-	qDebug() << "binding arg" << 0 << "with" << value;
 	Q_ASSERT_X(minUnusedArg < parameterCount(), Q_FUNC_INFO, "More parameters have been bound to the callback that the connected method accepts");
 	bind(minUnusedArg, value);
 }
