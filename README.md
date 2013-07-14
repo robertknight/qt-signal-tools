@@ -9,7 +9,7 @@ qt-signal-tools is a collection of utility classes related to signal and slots i
 
 ## Requirements
 
- * Qt 4.8 (could be adapted for earlier Qt versions if necessary)
+ * Qt 4.6 (earliest version tested, may also work with older Qt 4.x releases) or Qt 5.x
  * The TR1 standard library (for C++03 compilers) or the C++11 standard library
   (for newer compilers when C++11 support is enabled).
 
