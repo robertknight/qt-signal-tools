@@ -345,7 +345,7 @@ void QtSignalForwarder::delayedCall(int ms, const QtMetacallAdapter& adapter)
 	timer->setSingleShot(true);
 	timer->setInterval(ms);
 	QtSignalForwarder::connect(timer, SIGNAL(timeout()), adapter);
-	connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
+	QObject::connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
 	timer->start();
 }
 
