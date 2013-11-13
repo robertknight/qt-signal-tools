@@ -78,19 +78,27 @@ QtSignalForwarder::connect(&editor, SIGNAL(textChanged(QString)), callback);
 editor.setText("Hello World");
 ```
 
-### safe_bind()
+### Automatic disconnection
 
-Compared to using Qt 4's normal signals and slots, a disadvantage of using `bind()` or `function` to
-create a callback object which can be run later is that there is no automatically disconnection
-if the object is destroyed.
+For standard signal-slot connections, Qt automatically removes the connection if either the sender
+or receiver objects are destroyed.
 
-As a solution, the `safe_bind()` function creates a wrapper around an object and a method call.  The
-wrapper can then be called with the same arguments as the wrapped method.  When a call happens,
-either the wrapped method is called with the provided arguments, or if the object has been destroyed,
-nothing happens and a default value is returned.
+When using QtSignalForwarder::connect(), the connection is automatically removed if the sender
+is destroyed. However there is no receiver since the callback is a `function` object - which may
+call a method on a QObject or it may call a function which is not a QObject method at all.
 
-The wrapper created by `safe_bind()` can be used with `bind()` and `function` and can be used together
-with `QtSignalForwarder` to automatically 'disconnect' if the receiver is destroyed.
+QtSignalTools provides two solutions to this:
+
+ * `QtSignalForwarder::connect()` accepts an optional _context_ QObject*. The signal will automatically be
+   disconnected if either the sender or the context object is destroyed. This is the approach that should be
+   used if the callback is a method on a QObject. This behaves the same as the _context_ argument
+   to `QObject::connect()` in Qt 5.2 and later. 
+ * A more generic facility is to use the `safe_bind()` function which creates a wrapper around an object
+   and a method call.  The wrapper can then be called with the same arguments as the wrapped method.
+   When a call happens, either the wrapped method is called with the provided arguments, or if the object has
+   been destroyed, nothing happens and a default value is returned. The wrapper created by `safe_bind()`
+   can be used with `bind()` and `function` and can be used together with `QtSignalForwarder` to
+   automatically 'disconnect' if the receiver is destroyed.
 
 ```cpp
 QScopedPointer<QLabel> label(new QLabel);
