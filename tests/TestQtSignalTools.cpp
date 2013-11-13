@@ -430,4 +430,74 @@ void TestQtSignalTools::testConnectWithSender()
 	QCOMPARE(sender.values, QList<int>() << 34);
 }
 
+class TestRef
+{
+public:
+	static int s_count;
+	TestRef() { s_count++; }
+	TestRef(const TestRef &) { s_count++; }
+	~TestRef() { s_count--; }
+};
+
+int TestRef::s_count;
+
+void testContext(const TestRef &, int *x)
+{
+	if (x) {
+		(*x)++;
+	}
+};
+
+void TestQtSignalTools::testContextDestroyed()
+{
+	QCOMPARE(TestRef::s_count, 0);
+	CallbackTester tester;
+	QObject* context = new QObject();
+	int x = 0;
+	QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()), context,
+		function<void()>(bind(testContext, TestRef(), &x))
+	);
+	QtSignalForwarder::connect(&tester, SIGNAL(noArgSignal()),
+		function<void()>(bind(testContext, TestRef(), &x))
+	);
+	QCOMPARE(TestRef::s_count, 2);
+	QCOMPARE(x, 0);
+	tester.emitNoArgSignal();
+	QCOMPARE(x, 2);
+	delete context;
+	tester.emitNoArgSignal();
+	QCOMPARE(TestRef::s_count, 1);
+	QCOMPARE(x, 3);
+}
+
+void TestQtSignalTools::testContextDestroyedEqualsSender()
+{
+	QCOMPARE(TestRef::s_count, 0);
+	CallbackTester* tester = new CallbackTester();
+	QtSignalForwarder::connect(tester, SIGNAL(noArgSignal()), tester,
+		function<void()>(bind(testContext, TestRef(), (int *) 0))
+	);
+	delete tester;
+	QCOMPARE(TestRef::s_count, 0);
+}
+
+void TestQtSignalTools::testContextDestroyedShared()
+{
+	QCOMPARE(TestRef::s_count, 0);
+	CallbackTester* tester1 = new CallbackTester();
+	CallbackTester* tester2 = new CallbackTester();
+	QObject* context = new QObject();
+	QtSignalForwarder::connect(tester1, SIGNAL(noArgSignal()), tester2,
+		function<void()>(bind(testContext, TestRef(), (int *) 0))
+	);
+	QtSignalForwarder::connect(tester2, SIGNAL(noArgSignal()), context,
+		function<void()>(bind(testContext, TestRef(), (int *) 0))
+	);
+	QCOMPARE(TestRef::s_count, 2);
+	delete tester2;
+	QCOMPARE(TestRef::s_count, 0);
+	delete tester1;
+	QCOMPARE(TestRef::s_count, 0);
+}
+
 QTEST_MAIN(TestQtSignalTools)

@@ -26,6 +26,9 @@ class TestQtSignalTools : public QObject
 		void testManySenders();
 		void testProxyBindingLimits();
 		void testConnectWithSender();
+		void testContextDestroyed();
+		void testContextDestroyedEqualsSender();
+		void testContextDestroyedShared();
 
 		void testConnectPerf();
 };

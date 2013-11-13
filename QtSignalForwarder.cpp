@@ -82,7 +82,9 @@ void QtSignalForwarder::setupDestroyNotify(QObject* sender)
 	}
 }
 
-bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
+bool QtSignalForwarder::bind(QObject* sender, const char* signal, QObject *context,
+	const QtMetacallAdapter& callback
+)
 {
 	int signalIndex = qtObjectSignalIndex(sender, signal);
 	if (signalIndex < 0) {
@@ -90,7 +92,7 @@ bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetaca
 		return false;
 	}
 
-	Binding binding(sender, signalIndex, callback);
+	Binding binding(sender, signalIndex, context, callback);
 	binding.paramTypes = sender->metaObject()->method(signalIndex).parameterTypes();
 
 	if (!checkTypeMatch(callback, binding.paramTypes)) {
@@ -134,6 +136,11 @@ bool QtSignalForwarder::bind(QObject* sender, const char* signal, const QtMetaca
 	
 	m_senderSignalBindingIds.insertMulti(sender, bindingId);
 
+	if (context) {
+		setupDestroyNotify(context);
+		m_contextBindingIds.insertMulti(context, bindingId);
+	}
+
 	return true;
 }
 
@@ -162,7 +169,8 @@ void QtSignalForwarder::unbind(QObject* sender, const char* signal)
 		const Binding& binding = m_signalBindings.value(*iter);
 		if (binding.signalIndex == signalIndex) {
 			m_freeSignalBindingIds << *iter;
-			m_signalBindings.remove(*iter);
+			QObject* context = m_signalBindings.take(*iter).context;
+			m_contextBindingIds.remove(context, *iter);
 			iter = m_senderSignalBindingIds.erase(iter);
 		} else {
 			++iter;
@@ -193,16 +201,32 @@ void QtSignalForwarder::unbind(QObject* sender, QEvent::Type event)
 
 void QtSignalForwarder::unbind(QObject* sender)
 {
-	QHash<QObject*,int>::iterator iter = m_senderSignalBindingIds.find(sender);
-	while (iter != m_senderSignalBindingIds.end() && iter.key() == sender) {
-		m_freeSignalBindingIds << *iter;
-		m_signalBindings.remove(*iter);
-		iter = m_senderSignalBindingIds.erase(iter);
+	{
+		QHash<QObject*,int>::iterator iter = m_senderSignalBindingIds.find(sender);
+		while (iter != m_senderSignalBindingIds.end() && iter.key() == sender) {
+			m_freeSignalBindingIds << *iter;
+			QObject* context = m_signalBindings.take(*iter).context;
+			m_contextBindingIds.remove(context, *iter);
+			iter = m_senderSignalBindingIds.erase(iter);
+		}
 	}
 	m_eventBindings.remove(sender);
 
 	sender->removeEventFilter(this);
 	disconnect(sender, 0, this, 0);
+
+	{
+		QHash<QObject*,int>::iterator iter = m_contextBindingIds.find(sender);
+		while (iter != m_contextBindingIds.end() && iter.key() == sender) {
+			m_freeSignalBindingIds << *iter;
+			int id = *iter;
+			Binding x = m_signalBindings.take(id);
+			m_senderSignalBindingIds.remove(x.sender, *iter);
+			iter = m_contextBindingIds.erase(iter);
+			QMetaObject::disconnect(x.sender, x.signalIndex, this, id);
+		}
+	}
+
 }
 
 bool QtSignalForwarder::canAddSignalBindings() const
@@ -237,9 +261,9 @@ QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 	return proxies.last();
 }
 
-bool QtSignalForwarder::connect(QObject* sender, const char* signal, const QtMetacallAdapter& callback)
+bool QtSignalForwarder::connect(QObject* sender, const char* signal, QObject *context, const QtMetacallAdapter& callback)
 {
-	return sharedProxy(sender)->bind(sender, signal, callback);
+	return sharedProxy(sender)->bind(sender, signal, context, callback);
 }
 
 void QtSignalForwarder::disconnect(QObject* sender, const char* signal)
@@ -339,13 +363,13 @@ bool QtSignalForwarder::isConnected(QObject* sender) const
 	return m_eventBindings.contains(sender);
 }
 
-void QtSignalForwarder::delayedCall(int ms, const QtMetacallAdapter& adapter)
+void QtSignalForwarder::delayedCall(int ms, QObject *context, const QtMetacallAdapter& adapter)
 {
 	QTimer* timer = new QTimer;
 	timer->setSingleShot(true);
 	timer->setInterval(ms);
-	QtSignalForwarder::connect(timer, SIGNAL(timeout()), adapter);
-	connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
+	QtSignalForwarder::connect(timer, SIGNAL(timeout()), context, adapter);
+	QObject::connect(timer, SIGNAL(timeout()), timer, SLOT(deleteLater()));
 	timer->start();
 }
 
