@@ -462,9 +462,11 @@ void TestQtSignalTools::testContextDestroyed()
 	);
 	QCOMPARE(TestRef::s_count, 2);
 	QCOMPARE(x, 0);
+	QCOMPARE(tester.receiverCount(SIGNAL(noArgSignal())), 2);
 	tester.emitNoArgSignal();
 	QCOMPARE(x, 2);
 	delete context;
+	QCOMPARE(tester.receiverCount(SIGNAL(noArgSignal())), 1);
 	tester.emitNoArgSignal();
 	QCOMPARE(TestRef::s_count, 1);
 	QCOMPARE(x, 3);
