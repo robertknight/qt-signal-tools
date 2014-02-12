@@ -55,6 +55,8 @@ class QtSignalForwarder : public QObject
 
 		QtSignalForwarder(QObject* parent = 0);
 
+		virtual ~QtSignalForwarder();
+
 		/** Set up a binding so that @p callback is invoked when
 		 * @p sender emits @p signal.  If @p signal has default arguments,
 		 * they must be specified.  eg. Use SLOT(clicked(bool)) for a button
@@ -224,6 +226,8 @@ class QtSignalForwarder : public QObject
 		// bindings to QObject::destroy(QObject*) used to detect when a bound
 		// sender is destroyed
 		static QtMetacallAdapter s_senderDestroyedCallback;
+
+		static QList<QtSignalForwarder*> s_sharedProxies;
 };
 
 Q_DECLARE_METATYPE(QtSignalForwarder*)
