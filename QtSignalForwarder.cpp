@@ -255,7 +255,7 @@ QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 	//
 	static QList<QtSignalForwarder*> proxies;
 	if (proxies.isEmpty() || !proxies.last()->canAddSignalBindings()) {
-		QtSignalForwarder* newProxy = new QtSignalForwarder(QCoreApplication::instance());
+		QtSignalForwarder* newProxy = new QtSignalForwarder();
 		proxies << newProxy;
 	}
 	return proxies.last();
