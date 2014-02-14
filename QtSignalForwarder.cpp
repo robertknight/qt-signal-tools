@@ -29,7 +29,6 @@ void destroyBindingFunc()
 	Q_ASSERT(false);
 }
 QtMetacallAdapter QtSignalForwarder::s_senderDestroyedCallback(destroyBindingFunc);
-QList<QtSignalForwarder*> QtSignalForwarder::s_sharedProxies;
 
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
@@ -51,11 +50,6 @@ bool isMainThread()
 QtSignalForwarder::QtSignalForwarder(QObject* parent)
 	: QObject(parent)
 {
-}
-
-QtSignalForwarder::~QtSignalForwarder()
-{
-	s_sharedProxies.removeOne(this);
 }
 
 bool QtSignalForwarder::checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes)
@@ -259,11 +253,12 @@ QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 	// - When using Qt::AutoConnection to connect the sender and receiver, the
 	//   delivery method depends on the sender/receiver threads
 	//
-	if (s_sharedProxies.isEmpty() || !s_sharedProxies.last()->canAddSignalBindings()) {
+	static QList<QtSignalForwarder*> proxies;
+	if (proxies.isEmpty() || !proxies.last()->canAddSignalBindings()) {
 		QtSignalForwarder* newProxy = new QtSignalForwarder(QCoreApplication::instance());
-		s_sharedProxies << newProxy;
+		proxies << newProxy;
 	}
-	return s_sharedProxies.last();
+	return proxies.last();
 }
 
 bool QtSignalForwarder::connect(QObject* sender, const char* signal, QObject *context, const QtMetacallAdapter& callback)
@@ -389,3 +384,4 @@ bool QtSignalForwarder::connectWithSender(QObject* sender, const char* signal, Q
 	callback.bind(0, QVariant(senderType, &sender));
 	return connect(sender, signal, callback);
 }
+
