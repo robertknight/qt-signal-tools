@@ -9,6 +9,8 @@
 #include <QtCore/QElapsedTimer>
 #endif
 
+#include <QtCore/QThread>
+
 #include <iostream>
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
@@ -38,6 +40,21 @@ struct CallCounter
 	void increment() {
 		++count;
 	}
+};
+
+struct TestThread : public QThread
+{
+	TestThread(const function<void()>& func, QObject* parent)
+		: QThread(parent)
+		, threadFunc(func)
+	{}
+
+	virtual void run()
+	{
+		threadFunc();
+	}
+
+	function<void()> threadFunc;
 };
 
 void TestQtSignalTools::testInvoke()
@@ -500,6 +517,25 @@ void TestQtSignalTools::testContextDestroyedShared()
 	QCOMPARE(TestRef::s_count, 0);
 	delete tester1;
 	QCOMPARE(TestRef::s_count, 0);
+}
+
+void testConnectFromThread()
+{
+	CallbackTester t1;
+	QtSignalForwarder::connect(&t1, SIGNAL(aSignal(int)),
+	  QtCallback(&t1, SLOT(addValue(int))));
+	t1.emitASignal(32);
+	QCOMPARE(t1.values, QList<int>() << 32);
+}
+
+void TestQtSignalTools::testThread()
+{
+	TestThread t1(testConnectFromThread, 0);
+	TestThread t2(testConnectFromThread, 0);
+	t1.start();
+	t2.start();
+	QVERIFY(t1.wait());
+	QVERIFY(t2.wait());
 }
 
 QTEST_MAIN(TestQtSignalTools)

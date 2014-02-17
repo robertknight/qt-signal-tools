@@ -29,6 +29,7 @@ class TestQtSignalTools : public QObject
 		void testContextDestroyed();
 		void testContextDestroyedEqualsSender();
 		void testContextDestroyedShared();
+		void testThread();
 
 		void testConnectPerf();
 };

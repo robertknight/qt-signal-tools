@@ -54,6 +54,7 @@ class QtSignalForwarder : public QObject
 		typedef bool (*EventFilterFunc)(QObject*,QEvent*);
 
 		QtSignalForwarder(QObject* parent = 0);
+		virtual ~QtSignalForwarder();
 
 		/** Set up a binding so that @p callback is invoked when
 		 * @p sender emits @p signal.  If @p signal has default arguments,

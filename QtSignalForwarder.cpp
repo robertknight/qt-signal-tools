@@ -3,6 +3,7 @@
 #include <QtCore/QDebug>
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QSharedPointer>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
 #include <QThreadStorage>
@@ -29,6 +30,9 @@ void destroyBindingFunc()
 	Q_ASSERT(false);
 }
 QtMetacallAdapter QtSignalForwarder::s_senderDestroyedCallback(destroyBindingFunc);
+	
+// per-thread arrays of shared proxies used by the static connect() method
+Q_GLOBAL_STATIC(QThreadStorage<QVector<QSharedPointer<QtSignalForwarder> > >, sharedProxyList)
 
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
@@ -43,6 +47,10 @@ int qtObjectSignalIndex(const QObject* object, const char* signal)
 
 QtSignalForwarder::QtSignalForwarder(QObject* parent)
 	: QObject(parent)
+{
+}
+
+QtSignalForwarder::~QtSignalForwarder()
 {
 }
 
@@ -243,13 +251,12 @@ QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 	// - When using Qt::AutoConnection to connect the sender and receiver, the
 	//   delivery method depends on the sender/receiver threads
 	//
-	QThreadStorage<QList<QtSignalForwarder*> > s_proxies;
-	QList<QtSignalForwarder*> &proxies = s_proxies.localData();
+	QVector<QSharedPointer<QtSignalForwarder> > &proxies = sharedProxyList()->localData();
 	if (proxies.isEmpty() || !proxies.last()->canAddSignalBindings()) {
 		QtSignalForwarder* newProxy = new QtSignalForwarder();
-		proxies << newProxy;
+		proxies << QSharedPointer<QtSignalForwarder>(newProxy);
 	}
-	return proxies.last();
+	return proxies.last().data();
 }
 
 bool QtSignalForwarder::connect(QObject* sender, const char* signal, QObject *context, const QtMetacallAdapter& callback)
