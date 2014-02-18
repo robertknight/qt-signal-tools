@@ -1,11 +1,12 @@
 #include "QtSignalForwarder.h"
 
-#include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QSharedPointer>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
+#include <QThreadStorage>
 
 // method index of QObject::destroyed(QObject*) signal
 const int DESTROYED_SIGNAL_INDEX = 0;
@@ -29,7 +30,9 @@ void destroyBindingFunc()
 	Q_ASSERT(false);
 }
 QtMetacallAdapter QtSignalForwarder::s_senderDestroyedCallback(destroyBindingFunc);
-QList<QtSignalForwarder*> QtSignalForwarder::s_sharedProxies;
+	
+// per-thread arrays of shared proxies used by the static connect() method
+Q_GLOBAL_STATIC(QThreadStorage<QVector<QSharedPointer<QtSignalForwarder> > >, sharedProxyList)
 
 int qtObjectSignalIndex(const QObject* object, const char* signal)
 {
@@ -42,12 +45,6 @@ int qtObjectSignalIndex(const QObject* object, const char* signal)
 	return signalIndex;
 }
 
-// returns true if called on the main app thread
-bool isMainThread()
-{
-	return QThread::currentThread() == QCoreApplication::instance()->thread();
-}
-
 QtSignalForwarder::QtSignalForwarder(QObject* parent)
 	: QObject(parent)
 {
@@ -55,7 +52,6 @@ QtSignalForwarder::QtSignalForwarder(QObject* parent)
 
 QtSignalForwarder::~QtSignalForwarder()
 {
-	s_sharedProxies.removeOne(this);
 }
 
 bool QtSignalForwarder::checkTypeMatch(const QtMetacallAdapter& callback, const QList<QByteArray>& paramTypes)
@@ -242,10 +238,6 @@ bool QtSignalForwarder::canAddSignalBindings() const
 
 QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 {
-	// QtSignalForwarder methods are currently not thread-safe, so
-	// use of shared proxies is restricted to the main thread.
-	Q_ASSERT(isMainThread());
-
 	Q_UNUSED(sender);
 
 	// We try to use a small number of shared proxy objects to minimize
@@ -259,11 +251,12 @@ QtSignalForwarder* QtSignalForwarder::sharedProxy(QObject* sender)
 	// - When using Qt::AutoConnection to connect the sender and receiver, the
 	//   delivery method depends on the sender/receiver threads
 	//
-	if (s_sharedProxies.isEmpty() || !s_sharedProxies.last()->canAddSignalBindings()) {
-		QtSignalForwarder* newProxy = new QtSignalForwarder(QCoreApplication::instance());
-		s_sharedProxies << newProxy;
+	QVector<QSharedPointer<QtSignalForwarder> > &proxies = sharedProxyList()->localData();
+	if (proxies.isEmpty() || !proxies.last()->canAddSignalBindings()) {
+		QtSignalForwarder* newProxy = new QtSignalForwarder();
+		proxies << QSharedPointer<QtSignalForwarder>(newProxy);
 	}
-	return s_sharedProxies.last();
+	return proxies.last().data();
 }
 
 bool QtSignalForwarder::connect(QObject* sender, const char* signal, QObject *context, const QtMetacallAdapter& callback)
@@ -389,3 +382,4 @@ bool QtSignalForwarder::connectWithSender(QObject* sender, const char* signal, Q
 	callback.bind(0, QVariant(senderType, &sender));
 	return connect(sender, signal, callback);
 }
+
